@@ -29,8 +29,7 @@ scenarios =['Early and Steady',
 
 years = [2020, 2025, 2030, 2035, 2040, 2045, 2050]
 countries = ['AT','BA','BE','BG','CH','CZ','DE','DK','EE','ES','FI','FR','GB','GR','HR',
-             'HU','IT','LT','LU','LV','NO','PL','PT','RO','SE','SI','SK']
-            #['IE', 'NL','RS',] 
+             'HU','IT','LT','LU','LV','NO','PL','PT','RO','SE','SI','SK','IE', 'NL','RS',] 
 
 for scenario in scenarios:
     #one excel file per scenario
