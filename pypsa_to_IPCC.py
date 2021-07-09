@@ -1,20 +1,27 @@
 # -*- coding: utf-8 -*-
+"""
+Script to convert networks from PyPSA-Eur-Sec v0.0.2 to data format used in the
+IPCC AR6 database
+"""
 
 import pypsa
 import openpyxl
 import pandas as pd
-#original IPCC file
+
+#original IPCC file, official template
 path = "global_sectoral/global_sectoral/IPCC_AR6_WG3_Global_sectoral_Pathways_scenario_template_v3.1.xlsx"
 #use the official template
 
 model = "PyPSA-Eur-Sec 0.0.2"
 wind_split = ['DE', 'ES', 'FI', 'FR', 'GB', 'IT', 'NO', 'PL', 'RO', 'SE']
-scenario_short_name={'Baseline':'Base',
+scenario_short_name={'Early and Steady':'Base',
+                     'Late and Rapid':'Base',
                      'District heating expansion':'w_DH_exp',
                      'Space heat savings due to building renovation': 'w_Retro',
                      'Transmission expansion after 2030':'w_Tran_exp',
                      'Including road and rail transport':'w_EV_exp'}
-scenarios =['Baseline',
+scenarios =['Early and Steady',
+            'Late and Rapid',
             'District heating expansion',
             'Space heat savings due to building renovation',
             'Transmission expansion after 2030',
@@ -22,21 +29,30 @@ scenarios =['Baseline',
 
 years = [2020, 2025, 2030, 2035, 2040, 2045, 2050]
 countries = ['AT','BA','BE','BG','CH','CZ','DE','DK','EE','ES','FI','FR','GB','GR','HR',
-'HU','IT','LT','LU','LV','NO','PL','PT','RO','SE','SI','SK']
-#['IE', 'NL','RS',] #['ES', 'DK']
+             'HU','IT','LT','LU','LV','NO','PL','PT','RO','SE','SI','SK']
+            #['IE', 'NL','RS',] 
 
 for scenario in scenarios:
+    #one excel file per scenario
     file = openpyxl.load_workbook(path)
     ds = file['data'] #data sheet
     for year in years:
-        if scenario == 'Transmission expansion after 2030':
+        if scenario == 'Early and Steady':
+            n=pypsa.Network('data/version-{}/postnetworks/postnetwork-go_TYNDP_{}.nc'.format(scenario_short_name[scenario], year))
+        elif scenario == 'Late and Rapid':
+            n=pypsa.Network('data/version-{}/postnetworks/postnetwork-wait_TYNDP_{}.nc'.format(scenario_short_name[scenario], year))
+        elif scenario == 'Transmission expansion after 2030':
             n=pypsa.Network('data/version-{}/postnetworks/postnetwork-go_opt_{}.nc'.format(scenario_short_name[scenario], year))
         else:
             n=pypsa.Network('data/version-{}/postnetworks/postnetwork-go_TYNDP_{}.nc'.format(scenario_short_name[scenario], year))
+        
         costs = pd.read_csv("data/costs/costs_{}.csv".format(year), index_col=[0,1])
+        
         col=[c for c in ds[1] if c.value==year][0].column
+        
         for i,country in enumerate(countries):
             if year == 2020:
+                #one datasheet per country including information from different years
                 target = file.copy_worksheet(file['data'])
                 target.title ='data' + str(i)
             ds = file['data' + str(i)] 
@@ -57,19 +73,23 @@ for scenario in scenarios:
                 var['Capacity|Electricity|Wind|Onshore']=0.001*n.generators.p_nom_opt[country + ' onwind'] if country + ' onwind' in n.generators.index else 0
                 var['Capacity|Electricity|Wind|Offshore']=0.001*n.generators.p_nom_opt[country + ' offwind'] if country + ' offwind' in n.generators.index else 0
             var['Capacity|Electricity|Wind']=var['Capacity|Electricity|Wind|Onshore']+var['Capacity|Electricity|Wind|Offshore']
-            # Add split between rooftop PV and utility scale
+
 
             """
-            Capacity : Nuclear, Coal, Lignite, OCGT, CCGT
+            Capacity : Nuclear, Coal, Lignite, OCGT, CCGT, Biomass
             """
             #MW -> GW
-            var['Capacity|Electricity|Nuclear'] =0.001*n.links.efficiency[country + ' coal']*n.links.p_nom_opt[country + ' nuclear'] if country + ' nuclear' in n.links.index else 0
+            var['Capacity|Electricity|Nuclear'] =0.001*n.links.efficiency[country + ' nuclear']*n.links.p_nom_opt[country + ' nuclear'] if country + ' nuclear' in n.links.index else 0
             var['Capacity|Electricity|Coal|w/o CCS'] = 0.001*n.links.efficiency[country + ' coal']*n.links.p_nom_opt[country + ' coal'] if country + ' coal' in n.links.index else 0
             var['Capacity|Electricity|Coal|w/o CCS'] += 0.001*n.links.efficiency[country + ' lignite']*n.links.p_nom_opt[country + ' lignite'] if country + ' lignite' in n.links.index else 0
             var['Capacity|Electricity|Coal'] =var['Capacity|Electricity|Coal|w/o CCS'] 
             var['Capacity|Electricity|Gas|w/o CCS'] = 0.001* n.links.efficiency[country + ' OCGT']*n.links.p_nom_opt[country + ' OCGT'] if country + ' OCGT' in n.links.index else 0
             var['Capacity|Electricity|Gas|w/o CCS'] += 0.001*n.links.efficiency[country + ' CCGT']*n.links.p_nom_opt[country + ' CCGT'] if country + ' CCGT' in n.links.index else 0
             var['Capacity|Electricity|Gas'] = var['Capacity|Electricity|Gas|w/o CCS']
+            var['Capacity|Electricity|Biomass|w/o CCS'] = 0.001* n.links.efficiency[country + ' biomass EOP']*n.links.p_nom_opt[country + ' biomass EOP'] if country + ' biomass EOP' in n.links.index else 0
+            var['Capacity|Electricity|Biomass|w/o CCS'] += 0.001* n.links.efficiency[country + ' central biomass CHP electric']*n.links.p_nom_opt[country + ' central biomass CHP electric'] if country + ' central biomass CHP electric' in n.links.index else 0
+            var['Capacity|Electricity|Biomass'] = var['Capacity|Electricity|Biomass|w/o CCS']
+            
             """
             Capacity : hydro (reservoir, ror)
             """
@@ -87,22 +107,24 @@ for scenario in scenarios:
             var['Secondary Energy|Electricity|Solar|PV|Utility-scale PV'] = 0.5 * var['Secondary Energy|Electricity|Solar|PV'] 
             
             if country in wind_split:
-                var['Secondary Energy|Electricity|Wind|Onshore']=3.6e-9*n.generators_t.p[[i for i in n.generators.index if country in i and 'onwind' in i]].sum().sum()
-                var['Secondary Energy|Electricity|Wind|Offshore']=3.6e-9*n.generators_t.p[[i for i in n.generators.index if country in i and 'offwind' in i]].sum().sum()
+                var['Secondary Energy|Electricity|Wind|Onshore'] = 3.6e-9*n.generators_t.p[[i for i in n.generators.index if country in i and 'onwind' in i]].sum().sum()
+                var['Secondary Energy|Electricity|Wind|Offshore'] = 3.6e-9*n.generators_t.p[[i for i in n.generators.index if country in i and 'offwind' in i]].sum().sum()
             else:
-                var['Secondary Energy|Electricity|Wind|Onshore']=3.6e-9*n.generators_t.p[country + ' onwind'].sum() if country + ' onwind' in n.generators.index else 0
-                var['Secondary Energy|Electricity|Wind|Offshore']=3.6e-9*n.generators_t.p[country + ' offwind'].sum() if country + ' offwind' in n.generators.index else 0
-            var['Secondary Energy|Electricity|Wind']=var['Secondary Energy|Electricity|Wind|Onshore']+var['Secondary Energy|Electricity|Wind|Offshore']
+                var['Secondary Energy|Electricity|Wind|Onshore'] = 3.6e-9*n.generators_t.p[country + ' onwind'].sum() if country + ' onwind' in n.generators.index else 0
+                var['Secondary Energy|Electricity|Wind|Offshore'] = 3.6e-9*n.generators_t.p[country + ' offwind'].sum() if country + ' offwind' in n.generators.index else 0
+            var['Secondary Energy|Electricity|Wind'] = var['Secondary Energy|Electricity|Wind|Onshore'] + var['Secondary Energy|Electricity|Wind|Offshore']
             
             """
-            Electricity : Nuclear, Coal, Lignite, OCGT, CCGT
+            Electricity : Nuclear, Coal, Lignite, OCGT, CCGT, biomass
             """
             #MWh -> EJ
-            var['Secondary Energy|Electricity|Nuclear'] =-3.6e-9*n.links_t.p1[country + ' nuclear'].sum() if country + ' nuclear' in n.links.index else 0
-            var['Secondary Energy|Electricity|Coal'] =-3.6e-9*n.links_t.p1[country + ' coal'].sum() if country + ' coal' in n.links.index else 0
-            var['Secondary Energy|Electricity|Coal'] += -3.6e-9*n.links_t.p1[country + ' lignite'].sum() if country + ' lignite' in n.links.index else 0
-            var['Secondary Energy|Electricity|Gas'] =-3.6e-9*n.links_t.p1[country + ' OCGT'].sum() if country + ' OCGT' in n.links.index else 0
-            var['Secondary Energy|Electricity|Gas'] =-3.6e-9*n.links_t.p1[country + ' CCGT'].sum() if country + ' CCGT' in n.links.index else 0
+            var['Secondary Energy|Electricity|Nuclear'] = -3.6e-9*n.links_t.p1[country + ' nuclear'].sum() if country + ' nuclear' in n.links.index else 0
+            var['Secondary Energy|Electricity|Coal|w/o CCS'] =- 3.6e-9*n.links_t.p1[country + ' coal'].sum() if country + ' coal' in n.links.index else 0
+            var['Secondary Energy|Electricity|Coal|w/o CCS'] += -3.6e-9*n.links_t.p1[country + ' lignite'].sum() if country + ' lignite' in n.links.index else 0
+            var['Secondary Energy|Electricity|Gas|w/o CCS'] = -3.6e-9*n.links_t.p1[country + ' OCGT'].sum() if country + ' OCGT' in n.links.index else 0
+            var['Secondary Energy|Electricity|Gas|w/o CCS'] += -3.6e-9*n.links_t.p1[country + ' CCGT'].sum() if country + ' CCGT' in n.links.index else 0
+            var['Secondary Energy|Electricity|Biomass|w/o CCS'] = -3.6e-9*n.links_t.p1[country + ' biomass EOP'].sum() if country + ' biomass EOP' in n.links.index else 0
+            var['Secondary Energy|Electricity|Biomass|w/o CCS'] += -3.6e-9*n.links_t.p1[country + ' central biomass CHP electric'].sum() if country + ' central biomass CHP electric' in n.links.index else 0
             
             """
             Electricity : Hydro (reservoir, ror)
@@ -123,8 +145,8 @@ for scenario in scenarios:
             var['Capacity|Electricity|Storage|Hydrogen Storage Capacity'] = (var['Capacity|Electricity|Storage|Hydrogen Storage Capacity|overground']
                                                                             + var['Capacity|Electricity|Storage|Hydrogen Storage Capacity|underground'])
             var['Capacity|Electricity|Storage Capacity'] = ( var['Capacity|Electricity|Storage|Pumped Hydro Storage']
-                                                                    +  var['Capacity|Electricity|Storage|Battery Capacity']
-                                                                    + var['Capacity|Electricity|Storage|Hydrogen Storage Capacity'])
+                                                            +  var['Capacity|Electricity|Storage|Battery Capacity']
+                                                            + var['Capacity|Electricity|Storage|Hydrogen Storage Capacity'])
             
             """
             Capacity : heat pumps, heat resistors, Sabatier (synthetic gas)
@@ -142,26 +164,30 @@ for scenario in scenarios:
             """
             #MWh -> EJ
             #50/50 services/domestic
-            var['Final Energy|Residential and Commercial|Commercial|Heating|Heat pumps'] = - 3.6e-9*0.5*n.links_t.p1[country + ' central heat pump'].sum() if country + ' central heat pump' in n.links.index else 0
-            var['Final Energy|Residential and Commercial|Commercial|Heating|Heat pumps'] += - 3.6e-9*0.5*n.links_t.p1[country + ' decentral heat pump'].sum() if country + ' decentral heat pump' in n.links.index else 0
-            var['Final Energy|Residential and Commercial|Residential|Heating|Heat pumps'] = - 3.6e-9*0.5*n.links_t.p1[country + ' central heat pump'].sum() if country + ' central heat pump' in n.links.index else 0
-            var['Final Energy|Residential and Commercial|Residential|Heating|Heat pumps'] += - 3.6e-9*0.5*n.links_t.p1[country + ' decentral heat pump'].sum() if country + ' decentral heat pump' in n.links.index else 0
-            var['Final Energy|Residential and Commercial|Commercial|Heating|Electric boilers'] = - 3.6e-9*0.5*n.links_t.p1[country + ' central resistive heater'].sum() if country + ' central resistive heater' in n.links.index else 0
-            var['Final Energy|Residential and Commercial|Commercial|Heating|Electric boilers'] += - 3.6e-9*0.5*n.links_t.p1[country + ' decentral resistive heater'].sum() if country + ' decentral resistive heater' in n.links.index else 0
-            var['Final Energy|Residential and Commercial|Residential|Heating|Electric boilers'] = - 3.6e-9*0.5*n.links_t.p1[country + ' central resistive heater'].sum() if country + ' central resistive heater' in n.links.index else 0
-            var['Final Energy|Residential and Commercial|Residential|Heating|Electric boilers'] += - 3.6e-9*0.5*n.links_t.p1[country + ' decentral resistive heater'].sum() if country + ' decentral resistive heater' in n.links.index else 0
+            var['Final Energy|Residential and Commercial|Commercial|Heating|Heat pumps'] = - 3.6e-9 * 0.5 * n.links_t.p1[country + ' central heat pump'].sum() if country + ' central heat pump' in n.links.index else 0
+            var['Final Energy|Residential and Commercial|Commercial|Heating|Heat pumps'] += - 3.6e-9 * 0.5 * n.links_t.p1[country + ' decentral heat pump'].sum() if country + ' decentral heat pump' in n.links.index else 0
+            var['Final Energy|Residential and Commercial|Residential|Heating|Heat pumps'] = - 3.6e-9 * 0.5 * n.links_t.p1[country + ' central heat pump'].sum() if country + ' central heat pump' in n.links.index else 0
+            var['Final Energy|Residential and Commercial|Residential|Heating|Heat pumps'] += - 3.6e-9  *0.5 * n.links_t.p1[country + ' decentral heat pump'].sum() if country + ' decentral heat pump' in n.links.index else 0
+            var['Final Energy|Residential and Commercial|Commercial|Heating|Electric boilers'] = - 3.6e-9 * 0.5 * n.links_t.p1[country + ' central resistive heater'].sum() if country + ' central resistive heater' in n.links.index else 0
+            var['Final Energy|Residential and Commercial|Commercial|Heating|Electric boilers'] += - 3.6e-9 * 0.5 * n.links_t.p1[country + ' decentral resistive heater'].sum() if country + ' decentral resistive heater' in n.links.index else 0
+            var['Final Energy|Residential and Commercial|Residential|Heating|Electric boilers'] = - 3.6e-9 * 0.5 * n.links_t.p1[country + ' central resistive heater'].sum() if country + ' central resistive heater' in n.links.index else 0
+            var['Final Energy|Residential and Commercial|Residential|Heating|Electric boilers'] += - 3.6e-9 * 0.5 * n.links_t.p1[country + ' decentral resistive heater'].sum() if country + ' decentral resistive heater' in n.links.index else 0
+            var['Final Energy|Gas|Synthetic'] = - 3.6e-9*n.links_t.p1[country + ' Sabatier'].sum() if country + ' Sabatier' in n.links.index else 0
             
-            var['Final Energy|Gas|Synthetic'] = - 3.6e-9*0.5*n.links_t.p1[country + ' Sabatier'].sum() if country + ' Sabatier' in n.links.index else 0
+            """
+            Capacity : Electrolysis
+            """
+            #MW to GW
+            var['Capacity|Hydrogen|Electricity'] = 0.001*n.links.p_nom_opt[country + ' H2 Electrolysis']*n.links.efficiency[country + ' H2 Electrolysis'] if country + ' H2 Electrolysis' in n.links.index else 0
+
+            """
+            Hydrogen production
+            """
+            #MWh to EJ
+            var['Secondary Energy|Hydrogen|Electricity'] = -3.6e-9*n.links_t.p1[country + ' H2 Electrolysis'].sum() if country + ' H2 Electrolysis' in n.links.index else 0
             
             """
-            Capacity : storage (thermal energy storage)
-            """
-            #MWh to GWh
-            var['Capacity|Storage|Thermal Energy Storage|Household storage'] = 0.001*n.stores.e_nom_opt[country + ' water tank'] if country + ' water tank' in n.stores.index else 0
-            var['Capacity|Storage|Thermal Energy Storage|District heating storage'] = 0.001*n.stores.e_nom_opt[country + ' central water tank'] if country + ' central water tank' in n.stores.index else 0
-            var['Capacity|Storage|Thermal Energy Storage'] = var['Capacity|Storage|Thermal Energy Storage|Household storage'] + var['Capacity|Storage|Thermal Energy Storage|District heating storage']
-            """
-            Investment, O&M, Lifetime : Solar PV, onshore and offshore wind
+            Capital cost and Lifetime 
             """
             # €_2015/kW  to US$_2010/kW
             EUR2015_USD2010 = 1.11 /1.09
@@ -186,15 +212,24 @@ for scenario in scenarios:
                 var[metric + '|Gas|Synthetic'] = factor * costs.loc[('methanation', ipcc2pypsa[metric]),'value']
                 var[metric + '|Storage|Thermal Energy Storage|Household storage'] = factor * costs.loc[('decentral water tank storage', ipcc2pypsa[metric]),'value']
                 var[metric + '|Storage|Thermal Energy Storage|District heating storage'] = factor * costs.loc[('central water tank storage', ipcc2pypsa[metric]),'value']
+                var[metric + '|Hydrogen|Electricity'] = factor * costs.loc[('electrolysis', ipcc2pypsa[metric]),'value']
+                var[metric + '|Electricity|Biomass|w/o CCS'] = factor * costs.loc[('biomass EOP', ipcc2pypsa[metric]),'value']
+            
+            #there is a spelling error with variables overground/underground with capital/small intitial
+            # the following lines can be included in the loop when the spelling mistake is corrected
             metric='Capital Cost'
             var[metric + '|Electricity|Storage|Hydrogen Storage Capacity|overground'] = factor * costs.loc[('hydrogen storage tank', ipcc2pypsa[metric]),'value']
             var[metric + '|Electricity|Storage|Hydrogen Storage Capacity|underground'] = factor * costs.loc[('hydrogen storage underground', ipcc2pypsa[metric]),'value']
+            
             metric='Lifetime'
             var[metric + '|Electricity|Storage|Hydrogen Storage Capacity|Overground'] = factor * costs.loc[('hydrogen storage tank', ipcc2pypsa[metric]),'value']
             var[metric + '|Electricity|Storage|Hydrogen Storage Capacity|Underground'] = factor * costs.loc[('hydrogen storage underground', ipcc2pypsa[metric]),'value']
             
-            #'OM Cost|Fixed'
+            """
+            OM Cost
+            """
             #US$_2010/kW·year
+            factor = EUR2015_USD2010
             var['OM Cost |Electricity|Solar|PV|Rooftop PV'] = factor * 0.01*costs.loc[('solar-rooftop', 'FOM'),'value']*costs.loc[('solar-rooftop', 'investment'),'value']
             var['OM Cost|Electricity|Solar|PV|Utility-scale PV'] = factor * 0.01*costs.loc[('solar-utility', 'FOM'),'value']*costs.loc[('solar-utility', 'investment'),'value']
             var['OM Cost|Fixed|Electricity|Solar|PV'] = 0.5* var['OM Cost |Electricity|Solar|PV|Rooftop PV'] + 0.5*var['OM Cost|Electricity|Solar|PV|Utility-scale PV']
@@ -214,18 +249,30 @@ for scenario in scenarios:
             var['OM Cost|Gas|Synthetic'] = factor * 0.01*costs.loc[('methanation', 'FOM'),'value']*costs.loc[('methanation', 'investment'),'value']
             var['OM Cost|Storage|Thermal Energy Storage|Household storage'] = factor * 0.01*costs.loc[('decentral water tank storage', 'FOM'),'value']*costs.loc[('decentral water tank storage', 'investment'),'value']
             var['OM Cost|Storage|Thermal Energy Storage|District heating storage'] = factor * 0.01*costs.loc[('central water tank storage', 'FOM'),'value']*costs.loc[('central water tank storage', 'investment'),'value']
+            var['OM Cost|Fixed|Hydrogen|Electricity'] = factor * 0.01*costs.loc[('electrolysis', 'FOM'),'value']*costs.loc[('electrolysis', 'investment'),'value']
+            var['OM Cost|Fixed|Electricity|Biomass|w/o CCS'] = factor * 0.01*costs.loc[('biomass EOP', 'FOM'),'value']*costs.loc[('biomass EOP', 'investment'),'value']
 
-            #Efficiency
+            """
+            Efficiency
+            """
             var['Effciency|Heating|Heat pumps'] = costs.loc[('decentral air-sourced heat pump', 'efficiency'),'value']
             var['Efficiency|Heating|Electric boilers'] = costs.loc[('decentral resistive heater', 'efficiency'),'value']
             var['Efficiency|Gas|Synthetic'] = costs.loc[('methanation', 'efficiency'),'value']
+            var['Efficiency|Hydrogen|Electricity'] = costs.loc[('electrolysis', 'efficiency'),'value']
+            var['Efficiency|Electricity|Biomass|w/o CCS'] = costs.loc[('biomass EOP', 'efficiency'),'value']
 
 
             for v in var.keys():
                 ro=[r for r in ds['D'] if r.value==v][0].row
-                ds.cell(row=ro, column=col).value = round(var[v],2) 
+                ds.cell(row=ro, column=col).value = round(var[v],3) 
                 ds.cell(row=ro, column=1).value = model
                 ds.cell(row=ro, column=2).value = scenario
                 ds.cell(row=ro, column=3).value = country #region
+    # add scenario name to 'meta_scenario' sheet
+    ds2 = file['meta_scenario']
+    ds2.cell(row=4, column=2).value = scenario
+    if (scenario != 'Early and Steady' and scenario !='Late and Rapid'):
+        ds2.cell(row=4, column=3).value ='Early and Steady'
+        
     file.save("uploaded_to_IPCC_AR6/IPCC_AR6_WG3_Global_sectoral_Pathways_scenario_template_v3.1_{}.xlsx".format(scenario))
 
