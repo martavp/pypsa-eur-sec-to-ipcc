@@ -203,13 +203,7 @@ for scenario in scenarios:
             
             var[sh]['Installed capacity|Heat|Gases|Fossil|Natural Gas|CCS'] = 0.001*((n.links.efficiency2.filter(like ='gas CHP CC').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='gas CHP CC').filter(like =country)).sum())            
-            
-            #Capacity :Hydrogen
-            
-            var[sh]['Installed capacity|Heat|Gases|Hydrogen'] = 0.001*((n.links.efficiency2.filter(like ='H2 Fuel Cell').filter(like =country)
-                 *n.links.p_nom_opt.filter(like ='H2 Fuel Cell').filter(like =country)).sum())  
-           
-           
+
             #Capacity : Oil
  
             var[sh]['Installed capacity|Heat|Liquids|Fossil'] = 0.001*((n.links.efficiency.filter(like ='oil boiler').filter(like =country)
