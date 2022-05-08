@@ -13,7 +13,7 @@ path = "IAMC_format.xlsx"
 #use the official template
 
 model = "PyPSA-Eur-Sec 0.5.0"
-scenarios ={'1.5C carbon budget':'25.7','2.0C carbon budget':'73.9'}  #defines carbon budget for each scenario
+scenarios ={'Early neutrality scenario':'-cb25.7ex0','Climate neutrality scenario':'-cb45.0ex0', 'Current trends':'' }  #defines carbon budget for each scenario
 years = [2020, 2030, 2050]  
 sheets={"installed_capacity":0,"fuel_consumption_supply":1,"Emissions_supply":2,"Yearly_generation_supply":3,\
 "Winter_peak_generation":4,"summer_peak_generation":5,"Percentile50_generation":6,"Percentile25_generation":7,"Investments":8,\
@@ -51,7 +51,7 @@ for scenario in scenarios:
     file = openpyxl.load_workbook(path)
     for year in years:
         
-        n=pypsa.Network('postnetworks/elec_s370_37m_lv1.0__3H-T-H-B-I-solar+p3-dist1-cb{}ex0_{}.nc'.format(scenarios[scenario],year))
+        n=pypsa.Network('postnetworks/elec_s370_37m_lv1.0__3H-T-H-B-I-solar+p3-dist1{}_{}.nc'.format(scenarios[scenario],year))
         costs = pd.read_csv("costs/costs_{}.csv".format(year), index_col=[0,1])
         year_sub=2015 if year==years[0] else year
         countries=list(set(n.buses['country']))
