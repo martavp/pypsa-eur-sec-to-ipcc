@@ -606,18 +606,16 @@ for scenario in scenarios:
                   +n.loads_t.p.filter(like ='services urban decentral heat').filter(like =country).sum().sum()+ var[sh]['Final energy consumption|District heating'] )                                 
                                                                                
                  #add residential/services water/space heating demand if we have them                                                   
-                 #add for industrial energy demand table (resources)
                                                                                
-            if country is 'EU' :
-                var[sh]['Final energy consumption|Coal|Brown Coal|Lignite'] = 0.001*ct*(n.generators_t.p.filter(like ='EU lignite').sum().sum())                                                              
-                var[sh]['Final energy consumption|Coal'] = 0.001*ct*(n.generators_t.p.filter(like ='EU coal').sum().sum())+\
-                   var[sh]['Final energy consumption|Coal|Brown Coal|Lignite']
-                var[sh]['Final energy consumption|Gases|Fossil|Natural Gas'] = 0.001*ct*(n.generators_t.p.filter(like ='EU gas').sum().sum())                                                                              
-                var[sh]['Final energy consumption|Gases|Bio'] = 0.001*ct*(n.links_t.p0.filter(like ='EU biogas to gas').sum().sum() )
-                var[sh]['Final energy consumption|Solid bio and waste|Primary solid biomass'] = 0.001*ct*(n.links_t.p0.filter(like ='EU solid biomass').sum().sum()) 
-                var[sh]['Final energy consumption|Solid bio and waste']=var[sh]['Final energy consumption|Solid bio and waste|Primary solid biomass']    
-                                                                                  
-             #add EU process emissions?             
+            industry_demand=pd.read_table('resources/industrial_energy_demand_elec_s370_37m_{}.csv'.format(year),delimiter=',',index_col=0)
+            var[sh]['Final energy consumption|Industries|Coal|Coal products'] = 0.001*ct*industry_demand['coke'].filter(like=country).sum()*(10e5/3)
+            var[sh]['Final energy consumption|Industries|Coal'] = (0.001*ct*industry_demand['coal'].filter(like=country).sum()*(10e5/3)
+                +var[sh]['Final energy consumption|Industries|Coal|Coal products'])
+            var[sh]['Final energy consumption|Industries|Solid bio and waste|Primary solid biomass'] = 0.001*ct*industry_demand['solid biomass'].filter(like=country).sum()*(10e5/3)                                                                                                                                                                                                                                                  
+            var[sh]['Final energy consumption|Industries|Gases|Fossil|Natural Gas'] = 0.001*ct*industry_demand['methane'].filter(like=country).sum()*(10e5/3)
+            var[sh]['Final energy consumption|Industries|Liquids|Fossil'] = 0.001*ct*industry_demand['naphta'].filter(like=country).sum()*(10e5/3)                                                                      
+             
+            #add EU process emissions?              
             
             #print(country)
             col=[]
