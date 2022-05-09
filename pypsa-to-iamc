@@ -607,8 +607,13 @@ for scenario in scenarios:
             var[sh]['Final energy consumption|Industries|Gases|Fossil|Natural Gas'] = 0.001*ct*industry_demand['methane'].filter(like=country).sum()*(10e5/3)
             var[sh]['Final energy consumption|Industries|Liquids|Fossil'] = 0.001*ct*industry_demand['naphta'].filter(like=country).sum()*(10e5/3)                                                                      
              
-            #add EU process emissions?              
-            
+                #add EU process emissions?  
+                
+            if country is 'EU' :
+                var[sh]['Final energy consumption|Gases|Bio'] = 0.001*ct*(n.links_t.p0.filter(like ='biogas to gas').sum().sum()                
+                var[sh]['Final energy consumption|Transportation|Aviation|Liquids|Fossil'] = 0.001*ct*(n.loads_t.p.filter(like ='kerosene for aviation').sum().sum()) 
+                
+                
             #print(country)
             col=[]
             for sheet in sheets.keys() :
