@@ -85,7 +85,14 @@ sheet_var={"installed_capacity":'Installed capacity',
            'Percentile_25_consumpt':'Hourly power consumption|Percentile 25',
            'Percentile_50_consumpt':'Hourly power consumption|Percentile 50',
            'Summer_peak_consumpt' :'Hourly power consumption|Summer peak',
-           'Winter_peak_consumpt':'Hourly power consumption|Winter peak'}
+           'Winter_peak_consumpt':'Hourly power consumption|Winter peak',
+           'Investments':'Investments',
+           'Demand_final_energy':'Demand_final_energy',
+           'Demand_emissions':'Emissions|Kyoto gases|Fossil|CO2',
+           'Efficiency_demand':'Efficiency',
+           'Efficiency_supply':'Efficiency',
+           'Other_variables':'',
+           'ENBIOS':''}
 
 
 for scenario in scenarios:
@@ -206,10 +213,11 @@ for scenario in scenarios:
             #Capacity : storage (PHS, battery, H2 storage)
             
             var[sh]['Installed capacity|Flexibility|Electricity Storage|Medium duration'] = 0.001*((n.storage_units.p_nom_opt.filter(like ='PHS').filter(like =country).sum()
-             +n.stores.e_nom_opt.filter(like ='H2').filter(like =country)).sum())
+             +n.stores.e_nom_opt.filter(like ='H2').filter(like =country)).sum()/168)   #assume one week charge time for H2 storage
             
-            var[sh]['Installed capacity|Flexibility|Electricity Storage|Short duration'] = 0.001*(n.stores.e_nom_opt.filter(like ='battery').filter(like =country).sum())
-            # Battery includes utility-scale batteries, home batteries and EV batteries.
+            var[sh]['Installed capacity|Flexibility|Electricity Storage|Short duration'] = 0.001*(n.links.efficiency.filter(like ='battery charger')
+                 *n.links.p_nom_opt.filter(like ='battery charger')).sum()
+            # Battery includes utility-scale batteries, home batteries and EV batteries.   
             
             var[sh]['Installed capacity|Flexibility|Electricity Storage'] =  (var[sh]['Installed capacity|Flexibility|Electricity Storage|Medium duration']+
             var[sh]['Installed capacity|Flexibility|Electricity Storage|Short duration'])
@@ -709,9 +717,7 @@ for scenario in scenarios:
             var[sh]['Final energy consumption|Buildings|Heating'] = 0.001*h*(n.loads_t.p.filter(like ='residential rural heat').filter(like =country).sum().sum()
                   +n.loads_t.p.filter(like ='services rural heat').filter(like =country).sum().sum()+n.loads_t.p.filter(like ='residential urban decentral heat').filter(like =country).sum().sum()                                              
                   +n.loads_t.p.filter(like ='services urban decentral heat').filter(like =country).sum().sum()+ var[sh]['Final energy consumption|District heating'] )                                 
-                                                                               
-                 #add residential/services water/space heating demand if we have them                                                                   
-            
+                                                                                           
             var[sh]['Final energy consumption|Industries|Coal|Coal products'] = 0.001*industry_demand['coke'].filter(like=country).sum()
             var[sh]['Final energy consumption|Industries|Coal'] = (0.001*industry_demand['coal'].filter(like=country).sum()
                 +var[sh]['Final energy consumption|Industries|Coal|Coal products'])
@@ -723,7 +729,6 @@ for scenario in scenarios:
             ###Emissions (demand side)
             sh=sheets["Demand_emissions"]  
                                                                          
-            #add EU process emissions/oil emissions?             
             #Process Emissions
             var[sh]['Emissions|Kyoto gases|Fossil|CO2|Industries'] = 0.001*industry_demand['process emission'].filter(like=country).sum()
                 
@@ -750,8 +755,7 @@ for scenario in scenarios:
                  ds[sh].cell(row=ro, column=2).value = scenario
                  ds[sh].cell(row=ro, column=3).value = country #region
                 
-        ### EU adjustments    
-        
+        ### EU adjustments     
         #Efficiencies have been summed for Europe, the need to be devided by the number of countries
         #that had a value for the efficiency
         sh=sheets['Efficiency_supply'] 
@@ -775,8 +779,8 @@ for scenario in scenarios:
               ro=[r for r in ds_eu[sh]['D'] if 'Flexibility|Interconnect Importing Capacity' in r.value][0].row
               ds_eu[sheets[sheet]].cell(row=ro, column=col).value/= 2
             
-            
-
+    for sheet in sheet_var.keys() :   #removes empty sheets from original file      
+         del file[sheet]
     file.save("IAM_{}.xlsx".format(scenario))
                                                                           
-    
+                                                                    
