@@ -752,10 +752,10 @@ for scenario in scenarios:
             
             var[sh]['Final energy consumption|Transportation|Navigation'] = var[sh]['Final energy consumption|Transportation|Navigation|Liquids|Fossil']
             var[sh]['Final energy consumption|Transportation|Road'] = (var[sh]['Final energy consumption|Transportation|Road|Gases|Hydrogen']   
-                +var[sh]['Final energy consumption|Transportation|Road|Liquids|Fossil']+var[sh]['Final energy consumption|Transportation|Road|Electricity'])   
-                                                                                                               
+                +var[sh]['Final energy consumption|Transportation|Road|Liquids|Fossil']+var[sh]['Final energy consumption|Transportation|Road|Electricity'])                                                                                                                                     
+                                                             
             ###Emissions (demand side)  (Mt CO2)
-            sh=sheets["Demand_emissions"]                                                        
+            sh=sheets["Demand_emissions"]              
             #Process Emissions
             var[sh]['Emissions|Kyoto gases|Fossil|CO2|Industries'] = industry_demand['process emission'].filter(like=country).sum()
                                                                                                                                   
@@ -826,4 +826,4 @@ for scenario in scenarios:
             
     for sheet in sheet_var.keys() :   #removes empty sheets from original file      
          del file[sheet]
-    file.save("IAM1_{}.xlsx".format(scenario))
+    file.save("IAM_{}.xlsx".format(scenario))
