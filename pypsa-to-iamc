@@ -2,7 +2,7 @@
 Script to convert networks from PyPSA-Eur-Sec v0.5.0 to data format used in the
 IAMC database
 """
-
+ 
 
 import pypsa
 import openpyxl
@@ -46,12 +46,16 @@ winter_ee='2013-02-28 23:00:00'
 
 h=3              #hourly resolution
 MWh2TJ=3.6e-3     #convert MWh to TJ
+TWh2TJ=3.6e+3   #convert TWh to TJ
 
 #original IAMC file, official template
-path = "IAMC_format.xlsx"
+path = "format/IAMC_format.xlsx"
 
 model = "PyPSA-Eur-Sec 0.5.0"
-scenarios ={'Early neutrality scenario':'-cb25.7ex0','Climate neutrality scenario':'-cb45.0ex0','Current trends':''}  #defines carbon budget for each scenario
+scenarios ={'Early neutrality scenario':'-cb25.7ex0', 
+            'Early neutrality scenario With gas constrait':'-cb25.7ex0-gasconstrained' ,
+            'Current trends':'-cb73.9ex0',
+           'Current trends With gas constrait':'-cb73.9ex0-gasconstrained'}  
 years = [2020, 2030, 2050]  
 
 sheets={"installed_capacity":0,
@@ -99,7 +103,8 @@ for scenario in scenarios:
     #one excel file per scenario
     file = openpyxl.load_workbook(path)
     ds_eu=[]
-    ds_eu_uk=[] 
+    ds_eu_uk=[]
+    ds_all=[]  #To delete
     
     for year in years:
         
@@ -113,10 +118,13 @@ for scenario in scenarios:
         countries.insert(0,'EU')
         EU_UK = [country for country in countries if country not in ('NO','BA','ME','MK','RS','AL','CH','EU')]  #EU25+UK (EU25=EU27-Malta and Cyprus not in model)
         EU = [country for country in countries if country not in ('NO','BA','ME','MK','RS','AL','CH','GB','EU_UK')]  #EU25 (EU27-Malta and Cyprus not in model)
+        countries.insert(0,'All')  ##Delete
+        All= [country for country in countries if country not in ('EU','EU_UK')]  #Delete
         d={}
         n_eff_eu=collections.defaultdict(lambda: 0, d) #to keep track of efficiencies for EU
-        n_eff_eu_uk=collections.defaultdict(lambda: 0, d) #to keep track of efficiencies for EU_UK
-        
+        n_eff_eu_uk=collections.defaultdict(lambda: 0, d) #to keep track of efficiencies for EU_UK      
+        n_eff_all=collections.defaultdict(lambda: 0, d) #to keep track of efficiencies for All
+
         for country in countries:
             ds=[]
             var=[]
@@ -129,6 +137,8 @@ for scenario in scenarios:
                 ds_eu.append(file[sheet +' '+str(country)]) 
               if country is 'EU_UK' :  #Separate worksheet for EU_UK so other values could be added as the program runs
                 ds_eu_uk.append(file[sheet +' '+str(country)])   
+              if country is 'All' :  #TO delete
+                ds_all.append(file[sheet +' '+str(country)])   
               ds.append(file[sheet +' '+str(country)])  #set of worksheets for each country that is replaced each loop
               var.append({}) 
                         
@@ -583,14 +593,19 @@ for scenario in scenarios:
                 sh=sheets[sheet]
                 var[sh][sheet_var[sheet]+'|Heat']=var[sh][sheet_var[sheet]+'|Electricity']=var[sh][sheet_var[sheet]+'|Hydrogen']=0
                 
-                for v in var[sh].keys() :   #Summing the variables for the total variable, only needed for some of the sheets
-                  if 'Heat|' in v :
-                    var[sh][sheet_var[sheet]+'|Heat']+= var[sh][v]
-                  elif 'Electricity|' in v or 'Electricty|' in v :        #spelling error in table
-                    var[sh][sheet_var[sheet]+'|Electricity']+= var[sh][v]
-                  elif 'Hydrogen|' in v :
-                    var[sh][sheet_var[sheet]+'|Hydrogen']+= var[sh][v]  
-                
+                for v in var[sh].keys() :                                                               #Summing the variables for the total variable, only needed for some of the sheets
+                  if 'Heat|' in v :       
+                    masters= [i for i in var[sh].keys() if (i is not v) and (i in v) and ('Heat|' in i) ]  #only master variables are included (e.g: wind|onshore and wind|offshore are already summed in wind)
+                    if not masters and 'Biomass' not in v:                                                 #'Biomass' is the same as "solid bio and waste"
+                       var[sh][sheet_var[sheet]+'|Heat']+= var[sh][v]
+                  elif 'Electricity|' in v or 'Electricty|' in v :                                      #spelling error in table for 'electricity'
+                    masters= [i for i in var[sh].keys() if i is not v and i in v and ('Electricity|' in i or 'Electricty|' in i) ]  
+                    if not masters and 'Biomass' not in v:
+                       var[sh][sheet_var[sheet]+'|Electricity']+= var[sh][v]
+                  elif 'Hydrogen|' in v :      
+                    masters= [i for i in var[sh].keys() if (i is not v) and (i in v) and ('Hydrogen|' in i) ]  
+                    if not masters and 'Biomass' not in v:
+                       var[sh][sheet_var[sheet]+'|Hydrogen']+= var[sh][v]
             
             
             ### Efficiency
@@ -695,55 +710,63 @@ for scenario in scenarios:
             var[sh]['Efficiency|Hydrogen|Gasses|Fossil|Natural gas'] =n.links.efficiency.filter(like ='SMR').filter(like =country).mean()
             var[sh]['Efficiency|Hydrogen|Gasses|Fossil|Natural gas|CCS'] = n.links.efficiency.filter(like ='SMR CC').filter(like =country).mean()  
                   
-            ###Energy consumption (MWh -> TJ)    
+            ###Energy consumption (MWh -> TJ , TWh -> TJ)
             sh=sheets["Demand_final_energy"]  
             
+            #Indusrty
             var[sh]['Final energy consumption|Industries|Gases|Hydrogen'] = MWh2TJ*h*(n.loads_t.p.filter(like ='H2 for industry').filter(like =country).sum().sum())
             var[sh]['Final energy consumption|Industries|Direct heating'] = MWh2TJ*h*(n.loads_t.p.filter(like ='low-temperature heat for industry').filter(like =country).sum().sum())
             var[sh]['Final energy consumption|Industries|Electricity'] = MWh2TJ*h*(n.loads_t.p.filter(like ='industry electricity').filter(like =country).sum().sum())                                                                                                                                                                                                                                                   
-                                                                                           
+            var[sh]['Final energy consumption|Industries|Coal|Coal products'] = TWh2TJ*industry_demand['coke'].filter(like=country).sum()
+            var[sh]['Final energy consumption|Industries|Coal'] = (TWh2TJ*industry_demand['coal'].filter(like=country).sum()
+                +var[sh]['Final energy consumption|Industries|Coal|Coal products'])
+            var[sh]['Final energy consumption|Industries|Solid bio and waste|Primary solid biomass'] = TWh2TJ*industry_demand['solid biomass'].filter(like=country).sum()                                                                                                                                                                                                                               
+            var[sh]['Final energy consumption|Industries|Gases|Fossil|Natural Gas'] = TWh2TJ*industry_demand['methane'].filter(like=country).sum()
+            var[sh]['Final energy consumption|Industries|Liquids|Fossil'] = TWh2TJ*industry_demand['naphtha'].filter(like=country).sum()
+            
+            #Transportation 
             var[sh]['Final energy consumption|Transportation|Road|Gases|Hydrogen'] = MWh2TJ*h*(n.loads_t.p.filter(like ='land transport fuel cell').filter(like =country).sum().sum())                                                               
+            var[sh]['Final energy consumption|Transportation|Road|Liquids|Fossil'] = MWh2TJ*h*(n.loads_t.p.filter(like ='land transport oil').filter(like =country).sum().sum())
+            var[sh]['Final energy consumption|Transportation|Road|Electricity'] = MWh2TJ*h*(n.loads_t.p.filter(like ='land transport EV').filter(like =country).sum().sum())                                                               
+            var[sh]['Final energy consumption|Transportation|Navigation|Liquids|Fossil'] = MWh2TJ*h*(n.loads_t.p.filter(like ='shipping oil').filter(like =country).sum().sum())
+            var[sh]['Final energy consumption|Transportation|Aviation|Liquids|Fossil'] = 0
             var[sh]['Final energy consumption|Transportation|Gases|Hydrogen'] = (MWh2TJ*h*(n.loads_t.p.filter(like ='H2 for shipping').filter(like =country).sum().sum())
-                  +var[sh]['Final energy consumption|Transportation|Road|Gases|Hydrogen']) 
-                                                                               
-            var[sh]['Final energy consumption|Transportation|Road|Liquids|Fossil'] = MWh2TJ*h*(n.loads_t.p.filter(like ='land transport oil').filter(like =country).sum().sum())                                                               
-            var[sh]['Final energy consumption|Transportation|Liquids|Fossil'] = (MWh2TJ*h*(n.loads_t.p.filter(like ='shipping oil').filter(like =country).sum().sum())
-                  +var[sh]['Final energy consumption|Transportation|Road|Liquids|Fossil'])
-
-            var[sh]['Final energy consumption|Transportation|Electricity'] = MWh2TJ*h*(n.loads_t.p.filter(like ='land transport EV').filter(like =country).sum().sum())                                                               
-                                                                               
-            var[sh]['Final energy consumption|Electricity'] = (MWh2TJ*h*(n.loads_t.p[[i for i in n.loads.index if i==country+'0 0']].sum().sum())
-                  +var[sh]['Final energy consumption|Transportation|Electricity']+var[sh]['Final energy consumption|Industries|Electricity'])
-            var[sh]['Final energy consumption|Gases|Hydrogen'] = (var[sh]['Final energy consumption|Industries|Gases|Hydrogen']
-                  +var[sh]['Final energy consumption|Transportation|Gases|Hydrogen'])
-
-                                                                               
+                  +var[sh]['Final energy consumption|Transportation|Road|Gases|Hydrogen']) #There is no variable for navigation|gases , so H2 for shipping is added to the common variable
+                                                                                                                                                     
+            #Buildings                                                                    
             var[sh]['Final energy consumption|Buildings|Heating|District heating'] = MWh2TJ*h*(n.loads_t.p.filter(like ='urban central heat').filter(like =country).sum().sum())   
             var[sh]['Final energy consumption|District heating']=var[sh]['Final energy consumption|Buildings|Heating|District heating']                                                       
             var[sh]['Final energy consumption|Buildings|Heating'] = MWh2TJ*h*(n.loads_t.p.filter(like ='residential rural heat').filter(like =country).sum().sum()
                   +n.loads_t.p.filter(like ='services rural heat').filter(like =country).sum().sum()+n.loads_t.p.filter(like ='residential urban decentral heat').filter(like =country).sum().sum()                                              
                   +n.loads_t.p.filter(like ='services urban decentral heat').filter(like =country).sum().sum()+ var[sh]['Final energy consumption|District heating'] )                                 
-                                                                               
-                 #add residential/services water/space heating demand if we have them                                                                   
+            var[sh]['Final energy consumption|Buildings|Electricity'] = MWh2TJ*h*(n.loads_t.p[[i for i in n.loads.index if i==country+'0 0']].sum().sum())                                                                    
             
-            var[sh]['Final energy consumption|Industries|Coal|Coal products'] = MWh2TJ*industry_demand['coke'].filter(like=country).sum()
-            var[sh]['Final energy consumption|Industries|Coal'] = (MWh2TJ*industry_demand['coal'].filter(like=country).sum()
-                +var[sh]['Final energy consumption|Industries|Coal|Coal products'])
-            var[sh]['Final energy consumption|Industries|Solid bio and waste|Primary solid biomass'] = MWh2TJ*industry_demand['solid biomass'].filter(like=country).sum()                                                                                                                                                                                                                                                  
-            var[sh]['Final energy consumption|Industries|Gases|Fossil|Natural Gas'] = MWh2TJ*industry_demand['methane'].filter(like=country).sum()
-            var[sh]['Final energy consumption|Industries|Liquids|Fossil'] = MWh2TJ*industry_demand['naphtha'].filter(like=country).sum()
+            #Total and equal variables                                                                    
+            var[sh]['Final energy consumption|Electricity'] = (var[sh]['Final energy consumption|Buildings|Electricity']
+                  +var[sh]['Final energy consumption|Transportation|Road|Electricity']+var[sh]['Final energy consumption|Industries|Electricity'])
+            var[sh]['Final energy consumption|Gases|Hydrogen'] = (var[sh]['Final energy consumption|Industries|Gases|Hydrogen']
+                  +var[sh]['Final energy consumption|Transportation|Gases|Hydrogen'])                                                                      
+            var[sh]['Final energy consumption|Buildings'] = (var[sh]['Final energy consumption|Buildings|Heating']
+                  +var[sh]['Final energy consumption|Buildings|Electricity'])
             
-                                                               
-            ###Emissions (demand side)  (t CO2 -> Mt CO2)
-            sh=sheets["Demand_emissions"]  
-                                                                         
-            #add EU process emissions/oil emissions?             
+            var[sh]['Final energy consumption|Industries']=0
+            var[sh]['Final energy consumption|Transportation']=0
+            for v in var[sh].keys() :   #Summing the variables for transportation and industry
+                  if 'Final energy consumption|Industries|' in v and 'Coal products' not in v:             #'Coal products' is already summed in 'Coal'
+                    var[sh]['Final energy consumption|Industries']+= var[sh][v]
+                  if 'Final energy consumption|Transportation|' in v and 'Road|Gases|Hydrogen' not in v :  #'Road|Gases|Hydrogen' is already summed in '|Transportation|Gases|Hydrogen'
+                    var[sh]['Final energy consumption|Transportation']+= var[sh][v]                       
+            
+            var[sh]['Final energy consumption|Transportation|Navigation'] = var[sh]['Final energy consumption|Transportation|Navigation|Liquids|Fossil']
+            var[sh]['Final energy consumption|Transportation|Road'] = (var[sh]['Final energy consumption|Transportation|Road|Gases|Hydrogen']   
+                +var[sh]['Final energy consumption|Transportation|Road|Liquids|Fossil']+var[sh]['Final energy consumption|Transportation|Road|Electricity'])                                                                                                                                     
+                                                             
+            ###Emissions (demand side)  (Mt CO2)
+            sh=sheets["Demand_emissions"]              
             #Process Emissions
-            var[sh]['Emissions|Kyoto gases|Fossil|CO2|Industries'] = (1e-6)*industry_demand['process emission'].filter(like=country).sum()
-                
-                                                                         
-                                                                         
-                                                                         
+            var[sh]['Emissions|Kyoto gases|Fossil|CO2|Industries'] = industry_demand['process emission'].filter(like=country).sum()
+                                                                                                                                  
+                                                              
             col=[]
             for sheet in sheets.keys() :
               sh=sheets[sheet]   
@@ -769,14 +792,24 @@ for scenario in scenarios:
                             if 'Efficiency' in v :
                               n_eff_eu_uk[v] +=1 
                         ds_eu_uk[sh].cell(row=ro, column=col).value +=round(var[sh][v],3)
+                 if country in All:  #To delete
+                     if country is 'All':    #sets all initial values for All sheet as zero
+                        ds_all[sh].cell(row=ro, column=col).value=0
+                     else:                   #sums all country values for All sheet
+                        if  math.isnan(var[sh][v]):
+                            var[sh][v]=0
+                            if 'Efficiency' in v :
+                              n_eff_all[v] +=1
+                        ds_all[sh].cell(row=ro, column=col).value +=round(var[sh][v],3)       
  
                  ds[sh].cell(row=ro, column=1).value = model
                  ds[sh].cell(row=ro, column=2).value = scenario
                  ds[sh].cell(row=ro, column=3).value = country #region
                 
-        ### EU and EU_UK adjustments     
+        ### EU and EU_UK adjustments 
+        
         #Efficiencies have been summed, they need to be devided by the number of countries
-        #that had a value for the efficiency (EU has 25 countries and EU_UK has 26)
+        #that had a value for the efficiency (EU list has 25 countries plus itself, EU_UK list has 26 plus itself ...)
         sh=sheets['Efficiency_supply'] 
         col=[c for c in ds_eu[sh][1] if c.value=='Y_'+str(year_sub)][0].column
         for v in var[sh].keys():
@@ -787,8 +820,19 @@ for scenario in scenarios:
         for v in var[sh].keys():
           ro=[r for r in ds_eu_uk[sh]['D'] if r.value==v][0].row
           if (n_eff_eu_uk[v]+n_eff_eu[v]) !=26 : ds_eu_uk[sh].cell(row=ro, column=col).value/= (26-n_eff_eu[v]-n_eff_eu_uk[v])
-                                                                      
-                    
+            
+        col=[c for c in ds_all[sh][1] if c.value=='Y_'+str(year_sub)][0].column
+        for v in var[sh].keys():
+          ro=[r for r in ds_all[sh]['D'] if r.value==v][0].row
+          if (n_eff_eu_uk[v]+n_eff_eu[v]+n_eff_all[v]) !=32 : ds_all[sh].cell(row=ro, column=col).value/= (32-n_eff_all[v]-n_eff_eu[v]-n_eff_eu_uk[v])
+                
+        sh=sheets['Demand_final_energy']    #Aviation fuek demand is a single bus for all countries (not just EU27+Uk) but it's added to EU_UK sheet for best accuracy (TODO: enhance accuracy)
+        col=[c for c in ds_eu_uk[sh][1] if c.value=='Y_'+str(year_sub)][0].column
+        ro=[r for r in ds_eu[sh]['D'] if r.value=='Final energy consumption|Transportation|Aviation|Liquids|Fossil'][0].row
+        ds_eu_uk[sh].cell(row=ro, column=col).value=MWh2TJ*h*n.loads_t.p.filter(like ='kerosene for aviation').sum().sum()                                
+        ro=[r for r in ds_eu[sh]['D'] if r.value=='Final energy consumption|Transportation'][0].row
+        ds_eu_uk[sh].cell(row=ro, column=col).value+=MWh2TJ*h*n.loads_t.p.filter(like ='kerosene for aviation').sum().sum()                     
+                         
         #Interconnect capacities are added twice (once for each country connected to the transmission line)
         for sheet in ('installed_capacity',"Yearly_generation_supply","Winter_peak_generation",
                           "summer_peak_generation","Percentile50_generation","Percentile25_generation") :
@@ -800,9 +844,11 @@ for scenario in scenarios:
               col=[c for c in ds_eu_uk[sh][1] if c.value=='Y_'+str(year_sub)][0].column
               ro=[r for r in ds_eu_uk[sh]['D'] if 'Flexibility|Interconnect Importing Capacity' in r.value][0].row
               ds_eu_uk[sheets[sheet]].cell(row=ro, column=col).value/= 2
+                
+              col=[c for c in ds_all[sh][1] if c.value=='Y_'+str(year_sub)][0].column   #To delete
+              ro=[r for r in ds_all[sh]['D'] if 'Flexibility|Interconnect Importing Capacity' in r.value][0].row
+              ds_all[sheets[sheet]].cell(row=ro, column=col).value/= 2  
             
     for sheet in sheet_var.keys() :   #removes empty sheets from original file      
          del file[sheet]
-    file.save("IAM_{}.xlsx".format(scenario))
-                                                                          
-                                                                    
+    file.save("tables/IAM_{}.xlsx".format(scenario))
