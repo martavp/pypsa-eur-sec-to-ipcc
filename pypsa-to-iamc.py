@@ -22,6 +22,7 @@ def select_time_period(series) :
   return pd.Series(series[summer_i:summer_e]) 
  else :
   return series     
+
 def select_metric(series) :
  """
  returns the peak (max), percentile 25,  percentile 50, or total sum of a series
@@ -47,6 +48,7 @@ winter_ee='2013-02-28 23:00:00'
 h=3              #hourly resolution
 MWh2TJ=3.6e-3     #convert MWh to TJ
 TWh2TJ=3.6e+3   #convert TWh to TJ
+MW2GW=0.001
 
 #original IAMC file, official template
 path = "format/IAMC_format.xlsx"
@@ -126,6 +128,7 @@ for scenario in scenarios:
         n_eff_all=collections.defaultdict(lambda: 0, d) #to keep track of efficiencies for All
 
         for country in countries:
+          # Prepare ds and var for the specific country 
             ds=[]
             var=[]
             for sheet in sheets.keys() :
@@ -141,152 +144,139 @@ for scenario in scenarios:
                 ds_all.append(file[sheet +' '+str(country)])   
               ds.append(file[sheet +' '+str(country)])  #set of worksheets for each country that is replaced each loop
               var.append({}) 
-                        
+
+
+            #############################################
+            ######  Fill installed capacities sheet #####
+            #############################################            
             ###Electric capcaties (MW -> GW)
             sh=sheets['installed_capacity']  #first sheet
             
             #Capacity : Solar PV (rooftop, ground)   
-            
-            var[sh]['Installed capacity|Electricity|Solar|Rooftop PV'] = 0.001*n.generators.p_nom_opt.filter(like ='solar rooftop').filter(like =country).sum()
-            var[sh]['Installed capacity|Heat|Solar'] = 0.001*n.generators.p_nom_opt.filter(like ='solar thermal').filter(like =country).sum()
-            var[sh]['Installed capacity|Electricity|Solar|Open field'] = (0.001*n.generators.p_nom_opt.filter(like ='solar').filter(like =country).sum()
+            var[sh]['Installed capacity|Electricity|Solar|Rooftop PV'] = MW2GW*n.generators.p_nom_opt.filter(like ='solar rooftop').filter(like =country).sum()
+            var[sh]['Installed capacity|Heat|Solar'] = MW2GW*n.generators.p_nom_opt.filter(like ='solar thermal').filter(like =country).sum()
+            var[sh]['Installed capacity|Electricity|Solar|Open field'] = (MW2GW*n.generators.p_nom_opt.filter(like ='solar').filter(like =country).sum()
             -var[sh]['Installed capacity|Heat|Solar']-var[sh]['Installed capacity|Electricity|Solar|Rooftop PV'])
             var[sh]['Installed capacity|Electricity|Solar'] =var[sh]['Installed capacity|Electricity|Solar|Open field']+var[sh]['Installed capacity|Electricity|Solar|Rooftop PV']
             
             #Capacity :  onshore and offshore wind   
-            
-            var[sh]['Installed capacity|Electricity|Wind|Onshore']=0.001*n.generators.p_nom_opt.filter(like ='onwind').filter(like =country).sum() 
-            var[sh]['Installed capacity|Electricity|Wind|Offshore']=0.001*n.generators.p_nom_opt.filter(like ='offwind').filter(like =country).sum() 
+            var[sh]['Installed capacity|Electricity|Wind|Onshore']=MW2GW*n.generators.p_nom_opt.filter(like ='onwind').filter(like =country).sum() 
+            var[sh]['Installed capacity|Electricity|Wind|Offshore']=MW2GW*n.generators.p_nom_opt.filter(like ='offwind').filter(like =country).sum() 
             var[sh]['Installed capacity|Electricity|Wind']=var[sh]['Installed capacity|Electricity|Wind|Onshore']+var[sh]['Installed capacity|Electricity|Wind|Offshore']
             
             #Capacity : Nuclear
-            
-            var[sh]['Installed capacity|Electricity|Nuclear'] =0.001*((n.links.efficiency.filter(like ='nuclear').filter(like =country)
+            var[sh]['Installed capacity|Electricity|Nuclear'] =MW2GW*((n.links.efficiency.filter(like ='nuclear').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='nuclear').filter(like =country)).sum())
           
 
-            #Capacity :  Coal (Lignite)        
-                                                           
-            var[sh]['Installed capacity|Electricity|Coal|Brown Coal|Lignite'] = 0.001*((n.links.efficiency.filter(like ='lignite').filter(like =country)
+            #Capacity :  Coal (Lignite)                                                                   
+            var[sh]['Installed capacity|Electricity|Coal|Brown Coal|Lignite'] = MW2GW*((n.links.efficiency.filter(like ='lignite').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='lignite').filter(like =country)).sum())
             var[sh]['Installed capacity|Electricity|Coal|Brown Coal'] =var[sh]['Installed capacity|Electricity|Coal|Brown Coal|Lignite'] 
             
-            var[sh]['Installed capacity|Electricity|Coal'] = 0.001*((n.links.efficiency.filter(like ='coal').filter(like =country)
+            var[sh]['Installed capacity|Electricity|Coal'] = MW2GW*((n.links.efficiency.filter(like ='coal').filter(like =country)
                 *n.links.p_nom_opt.filter(like ='coal').filter(like =country)).sum())+ var[sh]['Installed capacity|Electricity|Coal|Brown Coal']                                                    
 
-            #Capacity : Natural gas(OCGT, CCGT, CHP, CHP CC)       
-                                                                 
-            var[sh]['Installed capacity|Electricity|Gases|Fossil|Natural gas'] = 0.001*((n.links.efficiency.filter(like ='gas CHP').filter(like =country)
+            #Capacity : Natural gas(OCGT, CCGT, CHP, CHP CC)                                                                        
+            var[sh]['Installed capacity|Electricity|Gases|Fossil|Natural gas'] = MW2GW*((n.links.efficiency.filter(like ='gas CHP').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='gas CHP').filter(like =country)).sum())
-            var[sh]['Installed capacity|Electricity|Gases|Fossil|Natural gas'] += 0.001*((n.links.efficiency.filter(like ='OCGT').filter(like =country)
+            var[sh]['Installed capacity|Electricity|Gases|Fossil|Natural gas'] += MW2GW*((n.links.efficiency.filter(like ='OCGT').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='OCGT').filter(like =country)).sum())
-            var[sh]['Installed capacity|Electricity|Gases|Fossil|Natural gas'] += 0.001*((n.links.efficiency.filter(like ='CCGT').filter(like =country)
+            var[sh]['Installed capacity|Electricity|Gases|Fossil|Natural gas'] += MW2GW*((n.links.efficiency.filter(like ='CCGT').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='CCGT').filter(like =country)).sum())
             
-            var[sh]['Installed capacity|Electricity|Gases|Fossil|Natural gas|CCS'] = 0.001*((n.links.efficiency.filter(like ='gas CHP CC').filter(like =country)
+            var[sh]['Installed capacity|Electricity|Gases|Fossil|Natural gas|CCS'] = MW2GW*((n.links.efficiency.filter(like ='gas CHP CC').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='gas CHP CC').filter(like =country)).sum()) 
                 
-            #Capacity :Biomass (CCS)
-                                                                 
-            var[sh]['Installed capacity|Electricity|Solid bio and waste|Primary solid biomass'] = 0.001*((n.links.efficiency.filter(like ='solid biomass CHP').filter(like =country)
+            #Capacity :Biomass (CCS)                                                                 
+            var[sh]['Installed capacity|Electricity|Solid bio and waste|Primary solid biomass'] = MW2GW*((n.links.efficiency.filter(like ='solid biomass CHP').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='solid biomass CHP').filter(like =country)).sum()+(n.links.efficiency.filter(like ='solid biomass CHP CC').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='solid biomass CHP CC').filter(like =country)).sum()) 
             var[sh]['Installed capacity|Electricity|Solid bio and waste'] = var[sh]['Installed capacity|Electricity|Solid bio and waste|Primary solid biomass']
             var[sh]['Installed capacity|Electricty|Biomass'] = var[sh]['Installed capacity|Electricity|Solid bio and waste']
             
-            var[sh]['Installed capacity|Electricity|Solid bio and waste|Primary solid biomass|CCS'] = 0.001*((n.links.efficiency.filter(like ='solid biomass CHP CC').filter(like =country)
+            var[sh]['Installed capacity|Electricity|Solid bio and waste|Primary solid biomass|CCS'] = MW2GW*((n.links.efficiency.filter(like ='solid biomass CHP CC').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='solid biomass CHP CC').filter(like =country)).sum())            
             var[sh]['Installed capacity|Electricity|Solid bio and waste|CCS'] = var[sh]['Installed capacity|Electricity|Solid bio and waste|Primary solid biomass|CCS']
             var[sh]['Installed capacity|Electricty|Biomass|CCS'] = var[sh]['Installed capacity|Electricity|Solid bio and waste|CCS']            
            
-            #Capacity : Hydrogen
-            
-            var[sh]['Installed capacity|Electricity|Gases|Hydrogen'] = 0.001*((n.links.efficiency.filter(like ='H2 Fuel Cell').filter(like =country)
+            #Capacity : Hydrogen            
+            var[sh]['Installed capacity|Electricity|Gases|Hydrogen'] = MW2GW*((n.links.efficiency.filter(like ='H2 Fuel Cell').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='H2 Fuel Cell').filter(like =country)).sum())
 
             #Capacity : Oil 
-
-            var[sh]['Installed capacity|Electricity|Liquids|Fossil'] = 0.001*((n.links.efficiency.filter(like ='oil-').filter(like =country)
+            var[sh]['Installed capacity|Electricity|Liquids|Fossil'] = MW2GW*((n.links.efficiency.filter(like ='oil-').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='oil-').filter(like =country)).sum())
 
             #Capacity : Power to gas  
             #  According to the SENTINEL team, this variable should include: 
-            #  "the power capacity used to produce H2, synthetic methane, synthetic oil or the three of them"
-            
-            var[sh]['Installed capacity|P2G|Electricity'] = 0.001*((n.links.efficiency.filter(like ='Sabatier').filter(like =country)
+            #  "the power capacity used to produce H2, synthetic methane, synthetic oil or the three of them"            
+            var[sh]['Installed capacity|P2G|Electricity'] = MW2GW*((n.links.efficiency.filter(like ='Sabatier').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='Sabatier').filter(like =country)).sum()+ 
                  (n.links.efficiency.filter(like ='helmeth').filter(like =country)*n.links.p_nom_opt.filter(like ='helmeth').filter(like =country)).sum()+ 
                  (n.links.efficiency.filter(like ='H2 Electrolysis').filter(like =country)*n.links.p_nom_opt.filter(like ='H2 Electrolysis').filter(like =country)).sum()+
                  (n.links.efficiency.filter(like ='Fischer-Tropsch').filter(like =country)*n.links.p_nom_opt.filter(like ='Fischer-Tropsch').filter(like =country)).sum()) 
             
             #Capacity : hydro (reservoir, ror)
-
-            var[sh]['Installed capacity|Electricity|Hydro|river'] = 0.001*n.generators.p_nom_opt.filter(like ='ror').filter(like =country).sum()
-            var[sh]['Installed capacity|Electricity|Hydro|dam'] = 0.001*n.storage_units.p_nom_opt.filter(like ='hydro').filter(like =country).sum()
+            var[sh]['Installed capacity|Electricity|Hydro|river'] = MW2GW*n.generators.p_nom_opt.filter(like ='ror').filter(like =country).sum()
+            var[sh]['Installed capacity|Electricity|Hydro|dam'] = MW2GW*n.storage_units.p_nom_opt.filter(like ='hydro').filter(like =country).sum()
             var[sh]['Installed capacity|Electricity|Hydro'] = var[sh]['Installed capacity|Electricity|Hydro|river']+var[sh]['Installed capacity|Electricity|Hydro|dam']
            
             
-            #Capacity : storage (PHS, battery, H2 storage)
-            
-            var[sh]['Installed capacity|Flexibility|Electricity Storage|Medium duration'] = 0.001*((n.storage_units.p_nom_opt.filter(like ='PHS').filter(like =country).sum()
+            #Capacity : storage (PHS, battery, H2 storage)            
+            var[sh]['Installed capacity|Flexibility|Electricity Storage|Medium duration'] = MW2GW*((n.storage_units.p_nom_opt.filter(like ='PHS').filter(like =country).sum()
              +n.stores.e_nom_opt.filter(like ='H2').filter(like =country)).sum()/168)   #assume one week charge time for H2 storage
             
-            var[sh]['Installed capacity|Flexibility|Electricity Storage|Short duration'] = 0.001*(n.links.efficiency.filter(like ='battery charger')
+            var[sh]['Installed capacity|Flexibility|Electricity Storage|Short duration'] = MW2GW*(n.links.efficiency.filter(like ='battery charger')
                  *n.links.p_nom_opt.filter(like ='battery charger')).sum()
             # Battery includes utility-scale batteries, home batteries and EV batteries.   
             
             var[sh]['Installed capacity|Flexibility|Electricity Storage'] =  (var[sh]['Installed capacity|Flexibility|Electricity Storage|Medium duration']+
             var[sh]['Installed capacity|Flexibility|Electricity Storage|Short duration'])
             
-            #Capacity : Interconnect 
-            
-            var[sh]['Installed capacity|Flexibility|Interconnect Importing Capacity'] = 0.001*((n.lines.s_nom_opt[[i for i in n.lines.index if country in n.lines.bus0[i] or country in n.lines.bus1[i]]]).sum()
+            #Capacity : Interconnect             
+            var[sh]['Installed capacity|Flexibility|Interconnect Importing Capacity'] = MW2GW*((n.lines.s_nom_opt[[i for i in n.lines.index if country in n.lines.bus0[i] or country in n.lines.bus1[i]]]).sum()
             +(n.links.p_nom_opt[[i for i in n.links.index if 'DC' in n.links.carrier[i] and ((country in n.links.bus0[i]) is not (country in n.links.bus1[i]))]]).sum())
                     
                 
             ### Heat capcaties (MW -> GW)
             
             #Capacity :Biomass (CCS)
-
-            var[sh]['Installed capacity|Heat|Biomass'] = 0.001*((n.links.efficiency2.filter(like ='solid biomass CHP').filter(like =country)
+            var[sh]['Installed capacity|Heat|Biomass'] = MW2GW*((n.links.efficiency2.filter(like ='solid biomass CHP').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='solid biomass CHP').filter(like =country)).sum())
             var[sh]['Installed capacity|Heat|Solid bio and waste'] = var[sh]['Installed capacity|Heat|Biomass']  
             var[sh]['Installed capacity|Heat|Solid bio and waste|Primary solid biomass'] = var[sh]['Installed capacity|Heat|Solid bio and waste']  
             
-            var[sh]['Installed capacity|Heat|Biomass|CCS'] = 0.001*((n.links.efficiency2.filter(like ='solid biomass CHP CC').filter(like =country)
+            var[sh]['Installed capacity|Heat|Biomass|CCS'] = MW2GW*((n.links.efficiency2.filter(like ='solid biomass CHP CC').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='solid biomass CHP CC').filter(like =country)).sum())
             var[sh]['Installed capacity|Heat|Solid bio and waste|CCS'] = var[sh]['Installed capacity|Heat|Biomass|CCS']  
             var[sh]['Installed capacity|Heat|Solid bio and waste|Primary solid biomass|CCS'] = var[sh]['Installed capacity|Heat|Solid bio and waste|CCS']  
           
             #Capacity :Electricity (Resistive heater, heat pump)
-            
-            var[sh]['Installed capacity|Heat|Electricity|Direct'] = 0.001*((n.links.efficiency.filter(like ='resistive heater').filter(like =country)
+            var[sh]['Installed capacity|Heat|Electricity|Direct'] = MW2GW*((n.links.efficiency.filter(like ='resistive heater').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='resistive heater').filter(like =country)).sum())
-            var[sh]['Installed capacity|Heat|Electricity|Heat pump'] = 0.001*((n.links_t.efficiency.filter(like ='heat pump').filter(like =country).mean()
+            var[sh]['Installed capacity|Heat|Electricity|Heat pump'] = MW2GW*((n.links_t.efficiency.filter(like ='heat pump').filter(like =country).mean()
                  *n.links.p_nom_opt.filter(like ='heat pump').filter(like =country)).sum())
             var[sh]['Installed capacity|Heat|Electricity']=var[sh]['Installed capacity|Heat|Electricity|Direct']+var[sh]['Installed capacity|Heat|Electricity|Heat pump']
 
             #Capacity :Natural gas
-
-            var[sh]['Installed capacity|Heat|Gases|Fossil|Natural Gas'] = 0.001*((n.links.efficiency2.filter(like ='gas CHP').filter(like =country)
+            var[sh]['Installed capacity|Heat|Gases|Fossil|Natural Gas'] = MW2GW*((n.links.efficiency2.filter(like ='gas CHP').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='gas CHP').filter(like =country)).sum())            
-            var[sh]['Installed capacity|Heat|Gases|Fossil|Natural Gas'] += 0.001*((n.links.efficiency.filter(like ='gas boiler').filter(like =country)
+            var[sh]['Installed capacity|Heat|Gases|Fossil|Natural Gas'] += MW2GW*((n.links.efficiency.filter(like ='gas boiler').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='gas boiler').filter(like =country)).sum())
-            var[sh]['Installed capacity|Heat|Gases|Fossil|Natural Gas|CCS'] = 0.001*((n.links.efficiency2.filter(like ='gas CHP CC').filter(like =country)
+            var[sh]['Installed capacity|Heat|Gases|Fossil|Natural Gas|CCS'] = MW2GW*((n.links.efficiency2.filter(like ='gas CHP CC').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='gas CHP CC').filter(like =country)).sum())              
            
-            #Capacity : Oil
- 
-            var[sh]['Installed capacity|Heat|Liquids|Fossil'] = 0.001*((n.links.efficiency.filter(like ='oil boiler').filter(like =country)
+            #Capacity : Oil 
+            var[sh]['Installed capacity|Heat|Liquids|Fossil'] = MW2GW*((n.links.efficiency.filter(like ='oil boiler').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='oil boiler').filter(like =country)).sum()) 
                                     
             # Hydrogen capacities 
-
-            var[sh]['Installed capacity|Hydrogen|Electricity'] = 0.001*((n.links.efficiency.filter(like ='H2 Electrolysis').filter(like =country)
+            var[sh]['Installed capacity|Hydrogen|Electricity'] = MW2GW*((n.links.efficiency.filter(like ='H2 Electrolysis').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='H2 Electrolysis').filter(like =country)).sum())       
-            var[sh]['Installed capacity|Hydrogen|Gasses|Fossil|Natural gas|CCS'] = 0.001*((n.links.efficiency.filter(like ='SMR CC').filter(like =country)
+            var[sh]['Installed capacity|Hydrogen|Gasses|Fossil|Natural gas|CCS'] = MW2GW*((n.links.efficiency.filter(like ='SMR CC').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='SMR CC').filter(like =country)).sum())                                                                       
-            var[sh]['Installed capacity|Hydrogen|Gasses|Fossil|Natural gas'] = 0.001*((n.links.efficiency.filter(like ='SMR').filter(like =country)
+            var[sh]['Installed capacity|Hydrogen|Gasses|Fossil|Natural gas'] = MW2GW*((n.links.efficiency.filter(like ='SMR').filter(like =country)
                  *n.links.p_nom_opt.filter(like ='SMR').filter(like =country)).sum())               
                         
             ### Fuel consumption (MWh -> TJ)
@@ -318,8 +308,7 @@ for scenario in scenarios:
               *n.links_t.p1.filter(like ='gas CHP CC').filter(like =country).sum().sum()            
                /(n.links_t.p1.filter(like ='gas CHP CC').filter(like =country).sum().sum()+n.links_t.p2.filter(like ='gas CHP CC').filter(like =country).sum().sum()))
             
-            #Fuel :Biomass (CCS)
-                                                                 
+            #Fuel :Biomass (CCS)                                                                 
             var[sh]['Fuel consumption|Electricity|Solid bio and waste|Primary solid biomass'] = h*MWh2TJ*(n.links_t.p0.filter(like ='solid biomass CHP').filter(like =country).sum().sum()
               *n.links_t.p1.filter(like ='solid biomass CHP').filter(like =country).sum().sum()            
                /(n.links_t.p1.filter(like ='solid biomass CHP').filter(like =country).sum().sum()+n.links_t.p2.filter(like ='solid biomass CHP').filter(like =country).sum().sum()))
@@ -332,23 +321,19 @@ for scenario in scenarios:
             var[sh]['Fuel consumption|Electricity|Solid bio and waste|CCS'] = var[sh]['Fuel consumption|Electricity|Solid bio and waste|Primary solid biomass|CCS']
             var[sh]['Fuel consumption|Electricty|Biomass|CCS'] = var[sh]['Fuel consumption|Electricity|Solid bio and waste|CCS']            
            
-            #Fuel : Hydrogen
-            
+            #Fuel : Hydrogen            
             var[sh]['Fuel consumption|Electricity|Gases|Hydrogen'] = h*MWh2TJ*(n.links_t.p0.filter(like ='H2 Fuel Cell').filter(like =country)).sum().sum()
 
             #Fuel : Oil 
-
             var[sh]['Fuel consumption|Electricity|Liquids|Fossil'] = h*MWh2TJ*(n.links_t.p0.filter(like ='oil-').filter(like =country)).sum().sum()
             
             #Fuel : Hydrogen 
-
             var[sh]['Fuel consumption|Hydrogen|Gasses|Fossil|Natural gas'] = h*MWh2TJ*(n.links_t.p0.filter(like ='SMR').filter(like =country)).sum().sum()
             var[sh]['Fuel consumption|Hydrogen|Gasses|Fossil|Natural gas|CCS'] = h*MWh2TJ*(n.links_t.p0.filter(like ='SMR CC').filter(like =country)).sum().sum()
             var[sh]['Fuel consumption|Hydrogen|Electricity'] = h*MWh2TJ*(n.links_t.p0.filter(like ='H2 Electrolysis').filter(like =country)).sum().sum()
                       
             ## For Heat
             #Fuel :Biomass (CCS)
-
             var[sh]['Fuel consumption|Heat|Biomass'] = (h*MWh2TJ*(n.links_t.p0.filter(like ='solid biomass CHP').filter(like =country)).sum().sum()
                -var[sh]['Fuel consumption|Electricty|Biomass'])
             var[sh]['Fuel consumption|Heat|Solid bio and waste'] = var[sh]['Fuel consumption|Heat|Biomass']  
@@ -360,7 +345,6 @@ for scenario in scenarios:
             var[sh]['Fuel consumption|Heat|Solid bio and waste|Primary solid biomass|CCS'] = var[sh]['Fuel consumption|Heat|Solid bio and waste|CCS']  
 
             #Fuel :Natural gas
-
             var[sh]['Fuel consumption|Heat|Gases|Fossil|Natural Gas'] = h*MWh2TJ* (n.links_t.p0.filter(like ='gas boiler').filter(like =country)).sum().sum()
             var[sh]['Fuel consumption|Heat|Gases|Fossil|Natural Gas'] += (h*MWh2TJ*(n.links_t.p0.filter(like ='gas CHP').filter(like =country)).sum().sum()
               -var[sh]['Fuel consumption|Electricity|Gases|Fossil|Natural gas'])
@@ -368,14 +352,15 @@ for scenario in scenarios:
               -var[sh]['Fuel consumption|Electricity|Gases|Fossil|Natural gas|CCS'])
                         
             #Fuel : Oil
- 
             var[sh]['Fuel consumption|Heat|Liquids|Fossil'] = h*MWh2TJ*(n.links_t.p0.filter(like ='oil boiler').filter(like =country)).sum().sum()       
                     
+            #############################################
+            ######  Fill Emissions sheet #####
+            #############################################     
             ### Emissions (tCO2 -> MtCO2)
             sh=sheets['Emissions_supply'] 
                   
-            #Emissions :  Coal (Lignite)        
-                                                           
+            #Emissions :  Coal (Lignite)                                                                   
             var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricity|Coal|Brown Coal|Lignite'] = (1e-6)*(-1)*h*(n.links_t.p2.filter(like ='lignite').filter(like =country)).sum().sum()
             var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricity|Coal|Brown Coal'] =var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricity|Coal|Brown Coal|Lignite']             
             var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricity|Coal'] = (1e-6)*(-1)*h*(n.links_t.p2.filter(like ='coal').filter(like =country)).sum().sum() + var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricity|Coal|Brown Coal']                                                    
@@ -436,92 +421,82 @@ for scenario in scenarios:
             var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricity|Liquids|Fossil'] = (1e-6)*(-1)*h*(n.links_t.p2.filter(like ='oil-').filter(like =country)).sum().sum() 
             var[sh]['Emissions|Kyoto gases|Fossil|CO2|Heat|Liquids|Fossil'] = (1e-6)*(-1)*h*(n.links_t.p2.filter(like ='oil boiler').filter(like =country)).sum().sum() 
             
-
+            #############################################
+            ######  Fill energy generation sheets #####
+            #############################################     
             ###Energy generation: total,peaks,and percentiles (MWh -> GWh)
-
             for sheet in sheets.keys(): 
              if sheet in ("Yearly_generation_supply","Winter_peak_generation","summer_peak_generation","Percentile50_generation","Percentile25_generation"):
                 sh=sheets[sheet]
                 
-                #Energy generation : Solar PV (rooftop, ground)   
-            
-                var[sh][sheet_var[sheet]+'|Electricity|Solar|Rooftop PV'] = 0.001*h*select_metric(select_time_period(n.generators_t.p.filter(like ='solar rooftop').filter(like =country).sum(axis=1)))
-                var[sh][sheet_var[sheet]+'|Heat|Solar'] = 0.001*h*select_metric(select_time_period(n.generators_t.p.filter(like ='solar thermal').filter(like =country).sum(axis=1)))
-                var[sh][sheet_var[sheet]+'|Electricity|Solar|Open field'] = (0.001*h*select_metric(select_time_period(n.generators_t.p.filter(like ='solar').filter(like =country).sum(axis=1)))
+                #Energy generation : Solar PV (rooftop, ground)               
+                var[sh][sheet_var[sheet]+'|Electricity|Solar|Rooftop PV'] = MW2GW*h*select_metric(select_time_period(n.generators_t.p.filter(like ='solar rooftop').filter(like =country).sum(axis=1)))
+                var[sh][sheet_var[sheet]+'|Heat|Solar'] = MW2GW*h*select_metric(select_time_period(n.generators_t.p.filter(like ='solar thermal').filter(like =country).sum(axis=1)))
+                var[sh][sheet_var[sheet]+'|Electricity|Solar|Open field'] = (MW2GW*h*select_metric(select_time_period(n.generators_t.p.filter(like ='solar').filter(like =country).sum(axis=1)))
                  -var[sh][sheet_var[sheet]+'|Heat|Solar']-var[sh][sheet_var[sheet]+'|Electricity|Solar|Rooftop PV'])
                 var[sh][sheet_var[sheet]+'|Electricity|Solar'] =var[sh][sheet_var[sheet]+'|Electricity|Solar|Open field']+var[sh][sheet_var[sheet]+'|Electricity|Solar|Rooftop PV']
              
-                #Energy generation :  onshore and offshore wind   
-             
-                var[sh][sheet_var[sheet]+'|Electricity|Wind|Onshore']=0.001*h*select_metric(select_time_period(n.generators_t.p.filter(like ='onwind').filter(like =country).sum(axis=1))) 
-                var[sh][sheet_var[sheet]+'|Electricity|Wind|Offshore']=0.001*h*select_metric(select_time_period(n.generators_t.p.filter(like ='offwind').filter(like =country).sum(axis=1))) 
+                #Energy generation :  onshore and offshore wind                
+                var[sh][sheet_var[sheet]+'|Electricity|Wind|Onshore']=MW2GW*h*select_metric(select_time_period(n.generators_t.p.filter(like ='onwind').filter(like =country).sum(axis=1))) 
+                var[sh][sheet_var[sheet]+'|Electricity|Wind|Offshore']=MW2GW*h*select_metric(select_time_period(n.generators_t.p.filter(like ='offwind').filter(like =country).sum(axis=1))) 
                 var[sh][sheet_var[sheet]+'|Electricity|Wind']=var[sh][sheet_var[sheet]+'|Electricity|Wind|Onshore']+var[sh][sheet_var[sheet]+'|Electricity|Wind|Offshore']
              
-                #Energy generation : Nuclear (values multiplied by (-1) since pypsa shows generation in links as negative values)
-            
-                var[sh][sheet_var[sheet]+'|Electricity|Nuclear'] =0.001*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='nuclear').filter(like =country)).sum(axis=1)))
+                #Energy generation : Nuclear (values multiplied by (-1) since pypsa shows generation in links as negative values)            
+                var[sh][sheet_var[sheet]+'|Electricity|Nuclear'] =MW2GW*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='nuclear').filter(like =country)).sum(axis=1)))
           
 
-                #Energy generation :  Coal (Lignite)        
-                                                           
-                var[sh][sheet_var[sheet]+'|Electricity|Coal|Brown Coal|Lignite'] = 0.001*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='lignite').filter(like =country)).sum(axis=1)))
+                #Energy generation :  Coal (Lignite)                                                                   
+                var[sh][sheet_var[sheet]+'|Electricity|Coal|Brown Coal|Lignite'] = MW2GW*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='lignite').filter(like =country)).sum(axis=1)))
                 var[sh][sheet_var[sheet]+'|Electricity|Coal|Brown Coal'] =var[sh][sheet_var[sheet]+'|Electricity|Coal|Brown Coal|Lignite']          
-                var[sh][sheet_var[sheet]+'|Electricity|Coal'] = 0.001*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='coal').filter(like =country)).sum(axis=1))) + var[sh][sheet_var[sheet]+'|Electricity|Coal|Brown Coal']                                                    
+                var[sh][sheet_var[sheet]+'|Electricity|Coal'] = MW2GW*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='coal').filter(like =country)).sum(axis=1))) + var[sh][sheet_var[sheet]+'|Electricity|Coal|Brown Coal']                                                    
  
-                #Energy generation : Natural gas(OCGT, CCGT, CHP, CHP CC)       
-                                                                 
-                var[sh][sheet_var[sheet]+'|Electricity|Gases|Fossil|Natural gas'] = 0.001*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='gas CHP').filter(like =country)).sum(axis=1)))
-                var[sh][sheet_var[sheet]+'|Electricity|Gases|Fossil|Natural gas'] += 0.001*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='OCGT').filter(like =country)).sum(axis=1)))
-                var[sh][sheet_var[sheet]+'|Electricity|Gases|Fossil|Natural gas'] += 0.001*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='CCGT').filter(like =country)).sum(axis=1)))
-                var[sh][sheet_var[sheet]+'|Electricity|Gases|Fossil|Natural gas|CCS'] = 0.001*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='gas CHP CC').filter(like =country)).sum(axis=1)))
+                #Energy generation : Natural gas(OCGT, CCGT, CHP, CHP CC)                                                                        
+                var[sh][sheet_var[sheet]+'|Electricity|Gases|Fossil|Natural gas'] = MW2GW*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='gas CHP').filter(like =country)).sum(axis=1)))
+                var[sh][sheet_var[sheet]+'|Electricity|Gases|Fossil|Natural gas'] += MW2GW*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='OCGT').filter(like =country)).sum(axis=1)))
+                var[sh][sheet_var[sheet]+'|Electricity|Gases|Fossil|Natural gas'] += MW2GW*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='CCGT').filter(like =country)).sum(axis=1)))
+                var[sh][sheet_var[sheet]+'|Electricity|Gases|Fossil|Natural gas|CCS'] = MW2GW*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='gas CHP CC').filter(like =country)).sum(axis=1)))
             
-                #Energy generation :Biomass (CCS)
-                                                                 
-                var[sh][sheet_var[sheet]+'|Electricity|Solid bio and waste|Primary solid biomass'] = 0.001*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='solid biomass CHP').filter(like =country)).sum(axis=1))) 
+                #Energy generation :Biomass (CCS)                                                                 
+                var[sh][sheet_var[sheet]+'|Electricity|Solid bio and waste|Primary solid biomass'] = MW2GW*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='solid biomass CHP').filter(like =country)).sum(axis=1))) 
                 var[sh][sheet_var[sheet]+'|Electricity|Solid bio and waste'] = var[sh][sheet_var[sheet]+'|Electricity|Solid bio and waste|Primary solid biomass']
                 var[sh][sheet_var[sheet]+'|Electricty|Biomass'] = var[sh][sheet_var[sheet]+'|Electricity|Solid bio and waste']
             
-                var[sh][sheet_var[sheet]+'|Electricity|Solid bio and waste|Primary solid biomass|CCS'] = 0.001*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='solid biomass CHP CC').filter(like =country)).sum(axis=1)))            
+                var[sh][sheet_var[sheet]+'|Electricity|Solid bio and waste|Primary solid biomass|CCS'] = MW2GW*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='solid biomass CHP CC').filter(like =country)).sum(axis=1)))            
                 var[sh][sheet_var[sheet]+'|Electricity|Solid bio and waste|CCS'] = var[sh][sheet_var[sheet]+'|Electricity|Solid bio and waste|Primary solid biomass|CCS']
                 var[sh][sheet_var[sheet]+'|Electricty|Biomass|CCS'] = var[sh][sheet_var[sheet]+'|Electricity|Solid bio and waste|CCS']            
            
-                #Energy generation : Hydrogen
-            
-                var[sh][sheet_var[sheet]+'|Electricity|Gases|Hydrogen'] = 0.001*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='H2 Fuel Cell').filter(like =country)).sum(axis=1)))
+                #Energy generation : Hydrogen            
+                var[sh][sheet_var[sheet]+'|Electricity|Gases|Hydrogen'] = MW2GW*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='H2 Fuel Cell').filter(like =country)).sum(axis=1)))
 
                 #Energy generation : Oil 
-
-                var[sh][sheet_var[sheet]+'|Electricity|Liquids|Fossil'] = 0.001*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='oil-').filter(like =country)).sum(axis=1)))
+                var[sh][sheet_var[sheet]+'|Electricity|Liquids|Fossil'] = MW2GW*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='oil-').filter(like =country)).sum(axis=1)))
 
                 #Energy generation : Power to gas 
                 #  According to the SENTINEL team, this variable should include: 
                 #  "the power capacity used to produce H2, synthetic methane, synthetic oil or the three of them"
             
-                var[sh][sheet_var[sheet]+'|P2G|Electricity'] = 0.001*(-1)*h*select_metric(select_time_period(n.links_t.p1.filter(like ='Sabatier').filter(like =country).sum(axis=1)))
-                var[sh][sheet_var[sheet]+'|P2G|Electricity']+= 0.001*(-1)*h*select_metric(select_time_period(n.links_t.p1.filter(like ='helmeth').filter(like =country).sum(axis=1))) 
-                var[sh][sheet_var[sheet]+'|P2G|Electricity']+= 0.001*(-1)*h*select_metric(select_time_period(n.links_t.p1.filter(like ='H2 Electrolysis').filter(like =country).sum(axis=1)))
-                var[sh][sheet_var[sheet]+'|P2G|Electricity']+= 0.001*(-1)*h*select_metric(select_time_period(n.links_t.p1.filter(like ='Fischer-Tropsch').filter(like =country).sum(axis=1)))               
+                var[sh][sheet_var[sheet]+'|P2G|Electricity'] = MW2GW*(-1)*h*select_metric(select_time_period(n.links_t.p1.filter(like ='Sabatier').filter(like =country).sum(axis=1)))
+                var[sh][sheet_var[sheet]+'|P2G|Electricity']+= MW2GW*(-1)*h*select_metric(select_time_period(n.links_t.p1.filter(like ='helmeth').filter(like =country).sum(axis=1))) 
+                var[sh][sheet_var[sheet]+'|P2G|Electricity']+= MW2GW*(-1)*h*select_metric(select_time_period(n.links_t.p1.filter(like ='H2 Electrolysis').filter(like =country).sum(axis=1)))
+                var[sh][sheet_var[sheet]+'|P2G|Electricity']+= MW2GW*(-1)*h*select_metric(select_time_period(n.links_t.p1.filter(like ='Fischer-Tropsch').filter(like =country).sum(axis=1)))               
               
             
                 #Energy generation : hydro (reservoir, ror)
-
-                var[sh][sheet_var[sheet]+'|Electricity|Hydro|river'] = 0.001*h*select_metric(select_time_period(n.generators_t.p.filter(like ='ror').filter(like =country).sum(axis=1)))
-                var[sh][sheet_var[sheet]+'|Electricity|Hydro|dam'] = 0.001*h*select_metric(select_time_period(n.storage_units_t.p.filter(like ='hydro').filter(like =country).sum(axis=1)))
+                var[sh][sheet_var[sheet]+'|Electricity|Hydro|river'] = MW2GW*h*select_metric(select_time_period(n.generators_t.p.filter(like ='ror').filter(like =country).sum(axis=1)))
+                var[sh][sheet_var[sheet]+'|Electricity|Hydro|dam'] = MW2GW*h*select_metric(select_time_period(n.storage_units_t.p.filter(like ='hydro').filter(like =country).sum(axis=1)))
                 var[sh][sheet_var[sheet]+'|Electricity|Hydro'] = var[sh][sheet_var[sheet]+'|Electricity|Hydro|river']+var[sh][sheet_var[sheet]+'|Electricity|Hydro|dam']
            
                 #Energy generation : storage (PHS, battery, H2 storage) (summing positive values for stores and storage units)
-
-                var[sh][sheet_var[sheet]+'|Flexibility|Electricity Storage|Medium duration'] = 0.001*h*(select_metric(select_time_period(
+                var[sh][sheet_var[sheet]+'|Flexibility|Electricity Storage|Medium duration'] = MW2GW*h*(select_metric(select_time_period(
                     n.storage_units_t.p.filter(like ='PHS').filter(like =country)[n.storage_units_t.p.filter(like ='PHS').filter(like =country)>0].sum(axis=1)))
                     +select_metric(select_time_period(n.stores_t.p.filter(like ='H2').filter(like =country)[n.stores_t.p.filter(like ='H2').filter(like =country)>0].sum(axis=1))))
-                var[sh][sheet_var[sheet]+'|Flexibility|Electricity Storage|Short duration'] = 0.001*h*(select_metric(select_time_period(
+                var[sh][sheet_var[sheet]+'|Flexibility|Electricity Storage|Short duration'] = MW2GW*h*(select_metric(select_time_period(
                     n.stores_t.p.filter(like ='battery').filter(like =country)[n.stores_t.p.filter(like ='battery').filter(like =country)>0].sum(axis=1))))
                 var[sh][sheet_var[sheet]+'|Flexibility|Electricity Storage'] = (var[sh][sheet_var[sheet]+'|Flexibility|Electricity Storage|Medium duration']
                  +var[sh][sheet_var[sheet]+'|Flexibility|Electricity Storage|Short duration'])
             
                 #Energy generation : Interconnect (summing positive values for lines and negative ones for links)
-
-                var[sh][sheet_var[sheet]+'|Flexibility|Interconnect Importing Capacity'] = 0.001*h*(select_metric(select_time_period(
+                var[sh][sheet_var[sheet]+'|Flexibility|Interconnect Importing Capacity'] = MW2GW*h*(select_metric(select_time_period(
                     ((-1)*n.lines_t.p1[[i for i in n.lines.index if country in n.lines.bus0[i] or country in n.lines.bus1[i]]])
                     [n.lines_t.p1[[i for i in n.lines.index if country in n.lines.bus0[i] or country in n.lines.bus1[i]]]<0].sum(axis=1)))
                  +select_metric(select_time_period(((
@@ -534,38 +509,33 @@ for scenario in scenarios:
                 ### Heat  (MWh -> GWh)
             
                 #Energy generation :Biomass (CCS)
-
-                var[sh][sheet_var[sheet]+'|Heat|Biomass'] = 0.001*(-1)*h*select_metric(select_time_period((n.links_t.p2.filter(like ='solid biomass CHP').filter(like =country)).sum(axis=1)))
+                var[sh][sheet_var[sheet]+'|Heat|Biomass'] = MW2GW*(-1)*h*select_metric(select_time_period((n.links_t.p2.filter(like ='solid biomass CHP').filter(like =country)).sum(axis=1)))
                 var[sh][sheet_var[sheet]+'|Heat|Solid bio and waste'] = var[sh][sheet_var[sheet]+'|Heat|Biomass']  
                 var[sh][sheet_var[sheet]+'|Heat|Solid bio and waste|Primary solid biomass'] = var[sh][sheet_var[sheet]+'|Heat|Solid bio and waste']  
             
-                var[sh][sheet_var[sheet]+'|Heat|Biomass|CCS'] = 0.001*(-1)*h*select_metric(select_time_period((n.links_t.p2.filter(like ='solid biomass CHP CC').filter(like =country)).sum(axis=1)))
+                var[sh][sheet_var[sheet]+'|Heat|Biomass|CCS'] = MW2GW*(-1)*h*select_metric(select_time_period((n.links_t.p2.filter(like ='solid biomass CHP CC').filter(like =country)).sum(axis=1)))
                 var[sh][sheet_var[sheet]+'|Heat|Solid bio and waste|CCS'] = var[sh][sheet_var[sheet]+'|Heat|Biomass|CCS']  
                 var[sh][sheet_var[sheet]+'|Heat|Solid bio and waste|Primary solid biomass|CCS'] = var[sh][sheet_var[sheet]+'|Heat|Solid bio and waste|CCS']  
           
-                #Energy generation :Electricity (Resistive heater, heat pump)
-            
-                var[sh][sheet_var[sheet]+'|Heat|Electricity|Direct'] = 0.001*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='resistive heater').filter(like =country)).sum(axis=1)))
-                var[sh][sheet_var[sheet]+'|Heat|Electricity|Heat pump'] = 0.001*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='heat pump').filter(like =country)).sum(axis=1)))
+                #Energy generation :Electricity (Resistive heater, heat pump)            
+                var[sh][sheet_var[sheet]+'|Heat|Electricity|Direct'] = MW2GW*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='resistive heater').filter(like =country)).sum(axis=1)))
+                var[sh][sheet_var[sheet]+'|Heat|Electricity|Heat pump'] = MW2GW*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='heat pump').filter(like =country)).sum(axis=1)))
                 var[sh][sheet_var[sheet]+'|Heat|Electricity']=(var[sh][sheet_var[sheet]+'|Heat|Electricity|Direct']
                  +var[sh][sheet_var[sheet]+'|Heat|Electricity|Heat pump'])
 
                 #Energy generation :Natural gas
-
-                var[sh][sheet_var[sheet]+'|Heat|Gases|Fossil|Natural Gas'] = 0.001*(-1)*h*select_metric(select_time_period((n.links_t.p2.filter(like ='gas CHP').filter(like =country)).sum(axis=1)))          
-                var[sh][sheet_var[sheet]+'|Heat|Gases|Fossil|Natural Gas'] += 0.001*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='gas boiler').filter(like =country)).sum(axis=1)))          
-                var[sh][sheet_var[sheet]+'|Heat|Gases|Fossil|Natural Gas|CCS'] = 0.001*(-1)*h*select_metric(select_time_period((n.links_t.p2.filter(like ='gas CHP CC').filter(like =country)).sum(axis=1)))            
+                var[sh][sheet_var[sheet]+'|Heat|Gases|Fossil|Natural Gas'] = MW2GW*(-1)*h*select_metric(select_time_period((n.links_t.p2.filter(like ='gas CHP').filter(like =country)).sum(axis=1)))          
+                var[sh][sheet_var[sheet]+'|Heat|Gases|Fossil|Natural Gas'] += MW2GW*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='gas boiler').filter(like =country)).sum(axis=1)))          
+                var[sh][sheet_var[sheet]+'|Heat|Gases|Fossil|Natural Gas|CCS'] = MW2GW*(-1)*h*select_metric(select_time_period((n.links_t.p2.filter(like ='gas CHP CC').filter(like =country)).sum(axis=1)))            
             
                 #Energy generation : Oil
- 
-                var[sh][sheet_var[sheet]+'|Heat|Liquids|Fossil'] = 0.001*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='oil boiler').filter(like =country)).sum(axis=1))) 
+                var[sh][sheet_var[sheet]+'|Heat|Liquids|Fossil'] = MW2GW*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='oil boiler').filter(like =country)).sum(axis=1))) 
             
                                                 
                 # Hydrogen Energy generation  (MWh -> GWh) 
-
-                var[sh][sheet_var[sheet]+'|Hydrogen|Electricity'] = 0.001*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='H2 Electrolysis').filter(like =country)).sum(axis=1)))                              
-                var[sh][sheet_var[sheet]+'|Hydrogen|Gasses|Fossil|Natural gas'] = 0.001*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='SMR').filter(like =country)).sum(axis=1)))            
-                var[sh][sheet_var[sheet]+'|Hydrogen|Gasses|Fossil|Natural gas|CCS'] = 0.001*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='SMR CC').filter(like =country)).sum(axis=1)))            
+                var[sh][sheet_var[sheet]+'|Hydrogen|Electricity'] = MW2GW*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='H2 Electrolysis').filter(like =country)).sum(axis=1)))                              
+                var[sh][sheet_var[sheet]+'|Hydrogen|Gasses|Fossil|Natural gas'] = MW2GW*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='SMR').filter(like =country)).sum(axis=1)))            
+                var[sh][sheet_var[sheet]+'|Hydrogen|Gasses|Fossil|Natural gas|CCS'] = MW2GW*(-1)*h*select_metric(select_time_period((n.links_t.p1.filter(like ='SMR CC').filter(like =country)).sum(axis=1)))            
             
                 var[sh][sheet_var[sheet]+'|Hydrogen'] = (var[sh][sheet_var[sheet]+'|Hydrogen|Electricity']+
                  var[sh][sheet_var[sheet]+'|Hydrogen|Gasses|Fossil|Natural gas']+
@@ -578,13 +548,13 @@ for scenario in scenarios:
             
                 #Hourly power consumption : Buildings, Industry, Transportation  (MWh -> GWh)
             
-                var[sh][sheet_var[sheet]+'|Electricity'] = 0.001*h*select_metric(select_time_period((n.loads_t.p[[i for i in n.loads.index if i==country+'0 0']]).sum(axis=1)))
-                var[sh][sheet_var[sheet]+'|Buildings|Heating'] = 0.001*h*select_metric(select_time_period(n.loads_t.p.filter(like ='heat').filter(like=country).sum(axis=1)))
-                var[sh][sheet_var[sheet]+'|Buildings|Residential|Heating'] = 0.001*h*select_metric(select_time_period(n.loads_t.p.filter(like ='heat').filter(like='residential').filter(like=country).sum(axis=1)))
-                var[sh][sheet_var[sheet]+'|Buildings|Services|Heating'] = 0.001*h*select_metric(select_time_period(n.loads_t.p.filter(like='heat').filter(like ='services').filter(like=country).sum(axis=1)))
+                var[sh][sheet_var[sheet]+'|Electricity'] = MW2GW*h*select_metric(select_time_period((n.loads_t.p[[i for i in n.loads.index if i==country+'0 0']]).sum(axis=1)))
+                var[sh][sheet_var[sheet]+'|Buildings|Heating'] = MW2GW*h*select_metric(select_time_period(n.loads_t.p.filter(like ='heat').filter(like=country).sum(axis=1)))
+                var[sh][sheet_var[sheet]+'|Buildings|Residential|Heating'] = MW2GW*h*select_metric(select_time_period(n.loads_t.p.filter(like ='heat').filter(like='residential').filter(like=country).sum(axis=1)))
+                var[sh][sheet_var[sheet]+'|Buildings|Services|Heating'] = MW2GW*h*select_metric(select_time_period(n.loads_t.p.filter(like='heat').filter(like ='services').filter(like=country).sum(axis=1)))
             
-                var[sh][sheet_var[sheet]+'|Industries|Electricity'] = 0.001*h*select_metric(select_time_period(n.loads_t.p.filter(like ='industry electricity').filter(like =country).sum(axis=1).squeeze()))
-                var[sh][sheet_var[sheet]+'|Transportation'] = (0.001*h*(select_metric(select_time_period(n.loads_t.p.filter(like ='transport').filter(like =country).sum(axis=1)))
+                var[sh][sheet_var[sheet]+'|Industries|Electricity'] = MW2GW*h*select_metric(select_time_period(n.loads_t.p.filter(like ='industry electricity').filter(like =country).sum(axis=1).squeeze()))
+                var[sh][sheet_var[sheet]+'|Transportation'] = (MW2GW*h*(select_metric(select_time_period(n.loads_t.p.filter(like ='transport').filter(like =country).sum(axis=1)))
                    +select_metric(select_time_period(n.loads_t.p.filter(like ='shipping').filter(like =country).sum(axis=1)))))
               
              if sheet in ("installed_capacity", "fuel_consumption_supply","Emissions_supply",
@@ -607,12 +577,13 @@ for scenario in scenarios:
                     if not masters and 'Biomass' not in v:
                        var[sh][sheet_var[sheet]+'|Hydrogen']+= var[sh][v]
             
-            
+            #############################################
+            #########  Fill Efficiencies sheet #########
+            #############################################   
             ### Efficiency
             sh=sheets["Efficiency_supply"]                 
                         
             #Efficiency : Solar PV (rooftop, ground), wind   
-            
             var[sh]['Efficiency|Electricity|Solar|Rooftop PV'] = n.generators.efficiency.filter(like ='solar rooftop').filter(like =country).mean()
             var[sh]['Efficiency|Heat|Solar'] = n.generators.efficiency.filter(like ='solar thermal').filter(like =country).mean()
             var[sh]['Efficiency|Electricity|Solar|Open field'] = n.generators.efficiency.filter(like ='solar').filter(like =country).mean()
@@ -623,8 +594,7 @@ for scenario in scenarios:
             var[sh]['Efficiency|Electricity|Wind']=(var[sh]['Efficiency|Electricity|Wind|Onshore']+
                                                     var[sh]['Efficiency|Electricity|Wind|Offshore'])/2
             
-            #Efficiency : Nuclear, Coal (lignite) 
-        
+            #Efficiency : Nuclear, Coal (lignite)         
             var[sh]['Efficiency|Electricity|Nuclear'] =n.links.efficiency.filter(like ='nuclear').mean()      
                                                            
             var[sh]['Efficiency|Electricity|Coal|Brown Coal|Lignite'] = n.links.efficiency.filter(like ='lignite').filter(like =country).mean()
@@ -632,13 +602,11 @@ for scenario in scenarios:
             var[sh]['Efficiency|Electricity|Coal'] = n.links.efficiency.filter(like ='coal').filter(like =country).mean()                                                  
             
             #Efficiency : hydro (reservoir, ror)
-
             var[sh]['Efficiency|Electricity|Hydro|river'] = n.generators.efficiency.filter(like ='ror').filter(like =country).mean()
             var[sh]['Efficiency|Electricity|Hydro|dam'] = n.storage_units.efficiency_dispatch.filter(like ='hydro').filter(like =country).mean()
             var[sh]['Efficiency|Electricity|Hydro'] = var[sh]['Efficiency|Electricity|Hydro|dam']   #currently equal in the model since eff(dam)=eff(river)
                 
-            #Efficiency : storage (battery, H2 storage)   
-            
+            #Efficiency : storage (battery, H2 storage)               
             var[sh]['Efficiency|Flexibility|Electricity Storage|Medium duration'] = (n.links.efficiency.filter(like ='H2 Electrolysis').filter(like =country).mean()
               *n.links.efficiency.filter(like ='H2 Fuel Cell').filter(like =country).filter(like =country).mean())
             var[sh]['Efficiency|Flexibility|Electricity Storage|Short duration'] = (n.links.efficiency.filter(like ='battery charger').filter(like =country).mean()
@@ -646,14 +614,12 @@ for scenario in scenarios:
             var[sh]['Efficiency|Flexibility|Electricity Storage'] =  (var[sh]['Efficiency|Flexibility|Electricity Storage|Medium duration']+
             var[sh]['Efficiency|Flexibility|Electricity Storage|Short duration'])/2
             
-            #Efficiency : Natural gas(OCGT, CCGT, CHP, CHP CC)       
-                                                                 
+            #Efficiency : Natural gas(OCGT, CCGT, CHP, CHP CC)                                                                        
             var[sh]['Efficiency|Electricity|Gases|Fossil|Natural gas'] = (n.links.efficiency.filter(like ='gas CHP').filter(like =country).mean()
               + n.links.efficiency.filter(like ='OCGT').filter(like =country).mean() + n.links.efficiency.filter(like ='CCGT').filter(like =country).mean())/3
             var[sh]['Efficiency|Electricity|Gases|Fossil|Natural gas|CCS'] = n.links.efficiency.filter(like ='gas CHP CC').filter(like =country).mean()
                 
-            #Efficiency :Biomass (CCS)
-                                                                 
+            #Efficiency :Biomass (CCS)                                                                 
             var[sh]['Efficiency|Electricity|Solid bio and waste|Primary solid biomass'] =n.links.efficiency.filter(like ='solid biomass CHP').filter(like =country).mean()
             var[sh]['Efficiency|Electricity|Solid bio and waste']=var[sh]['Efficiency|Electricity|Solid bio and waste|Primary solid biomass']
             var[sh]['Efficiency|Electricty|Biomass']=var[sh]['Efficiency|Electricity|Solid bio and waste']
@@ -661,16 +627,13 @@ for scenario in scenarios:
             var[sh]['Efficiency|Electricity|Solid bio and waste|CCS']=var[sh]['Efficiency|Electricity|Solid bio and waste|Primary solid biomass|CCS']
             var[sh]['Efficiency|Electricty|Biomass|CCS']=var[sh]['Efficiency|Electricity|Solid bio and waste|CCS']
             
-            #Efficiency : Hydrogen
-            
+            #Efficiency : Hydrogen            
             var[sh]['Efficiency|Electricity|Gases|Hydrogen'] = n.links.efficiency.filter(like ='H2 Fuel Cell').filter(like =country).mean()
 
             #Efficiency : Oil 
-
             var[sh]['Efficiency|Electricity|Liquids|Fossil'] =n.links.efficiency.filter(like ='oil-').filter(like =country).mean()
 
             #Efficiency : Power to gas  
-
             var[sh]['Efficiency|P2G|Electricity'] = (n.links.efficiency.filter(like ='Sabatier').filter(like =country).mean()+ 
                  n.links.efficiency.filter(like ='helmeth').filter(like =country).mean()+
                  n.links.efficiency.filter(like ='H2 Electrolysis').filter(like =country).mean()+
@@ -679,7 +642,6 @@ for scenario in scenarios:
             ### Heat
             
             #Efficiency :Biomass (CCS)
-
             var[sh]['Efficiency|Heat|Biomass'] = n.links.efficiency2.filter(like ='solid biomass CHP').filter(like =country).mean()
             var[sh]['Efficiency|Heat|Solid bio and waste'] = var[sh]['Efficiency|Heat|Biomass']  
             var[sh]['Efficiency|Heat|Solid bio and waste|Primary solid biomass'] = var[sh]['Efficiency|Heat|Solid bio and waste']  
@@ -689,23 +651,19 @@ for scenario in scenarios:
             var[sh]['Efficiency|Heat|Solid bio and waste|Primary solid biomass|CCS'] = var[sh]['Efficiency|Heat|Solid bio and waste|CCS']  
 
             #Efficiency :Natural gas
-
             var[sh]['Efficiency|Heat|Gases|Fossil|Natural Gas'] = (n.links.efficiency2.filter(like ='gas CHP').filter(like =country).mean()
              +n.links.efficiency.filter(like ='gas boiler').filter(like =country).mean())/2
             var[sh]['Efficiency|Heat|Gases|Fossil|Natural Gas|CCS'] = n.links.efficiency2.filter(like ='gas CHP CC').filter(like =country).mean()            
            
             #Efficiency : Oil
- 
             var[sh]['Efficiency|Heat|Liquids|Fossil'] = n.links.efficiency.filter(like ='oil boiler').filter(like =country).mean()
 
-            #Efficiency :Electricity (Resistive heater, heat pump)
-           
+            #Efficiency :Electricity (Resistive heater, heat pump)           
             var[sh]['Efficiency|Heat|Electricity|Direct'] = n.links.efficiency.filter(like ='resistive heater').filter(like =country).mean()
             var[sh]['Efficiency|Heat|Electricity|Heat pump'] = n.links_t.efficiency.filter(like ='heat pump').filter(like =country).mean().mean()
 
                   
             # Hydrogen Efficiency   
-
             var[sh]['Efficiency|Hydrogen|Electricity'] = n.links.efficiency.filter(like ='H2 Electrolysis').filter(like =country).mean()                 
             var[sh]['Efficiency|Hydrogen|Gasses|Fossil|Natural gas'] =n.links.efficiency.filter(like ='SMR').filter(like =country).mean()
             var[sh]['Efficiency|Hydrogen|Gasses|Fossil|Natural gas|CCS'] = n.links.efficiency.filter(like ='SMR CC').filter(like =country).mean()  
@@ -849,6 +807,8 @@ for scenario in scenarios:
               ro=[r for r in ds_all[sh]['D'] if 'Flexibility|Interconnect Importing Capacity' in r.value][0].row
               ds_all[sheets[sheet]].cell(row=ro, column=col).value/= 2  
             
-    for sheet in sheet_var.keys() :   #removes empty sheets from original file      
+     #removes empty sheets from original file   
+    for sheet in sheet_var.keys() :      
          del file[sheet]
+     # Save file for current scenario
     file.save("tables/IAM_{}.xlsx".format(scenario))
