@@ -3,7 +3,7 @@ Script to convert networks from PyPSA-Eur-Sec v0.5.0 to data format used in the
 IAMC database
 """
  
-
+import numpy as np
 import pypsa
 import openpyxl
 import pandas as pd
@@ -53,7 +53,7 @@ MW2GW=0.001
 #original IAMC file, official template
 path = "format/IAMC_format.xlsx"
 
-model = "PyPSA-Eur-Sec 0.5.0"
+model = "PyPSA-Eur-Sec 0.6.0"
 scenarios ={'Early neutrality scenario':'-cb25.7ex0', 
             'Early neutrality scenario With gas constrait':'-cb25.7ex0-gasconstrained' ,
             'Current trends':'-cb73.9ex0',
