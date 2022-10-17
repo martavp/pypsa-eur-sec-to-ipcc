@@ -294,32 +294,37 @@ for scenario in scenarios:
             var[sh]['Fuel consumption|Electricity|Coal'] = h*MWh2TJ*(n.links_t.p0.filter(like ='coal').filter(like =country)).sum().sum() + var[sh]['Fuel consumption|Electricity|Coal|Brown Coal']                                                    
 
             #Fuel : Natural gas(OCGT, CCGT, CHP, CHP CC)       
-                                                                 
-            var[sh]['Fuel consumption|Electricity|Gases|Fossil|Natural gas'] = h*MWh2TJ* (n.links_t.p0.filter(like ='OCGT').filter(like =country)).sum().sum()
-            var[sh]['Fuel consumption|Electricity|Gases|Fossil|Natural gas'] += h*MWh2TJ*(n.links_t.p0.filter(like ='CCGT').filter(like =country)).sum().sum()
-            
-            #CHP fuels calculated bsed on share of electricity and heat:
-            
-            var[sh]['Fuel consumption|Electricity|Gases|Fossil|Natural gas'] += h*MWh2TJ*(n.links_t.p0.filter(like ='gas CHP').filter(like =country).sum().sum()
-              *n.links_t.p1.filter(like ='gas CHP').filter(like =country).sum().sum()             
-               /(n.links_t.p1.filter(like ='gas CHP').filter(like =country).sum().sum()+n.links_t.p2.filter(like ='gas CHP').filter(like =country).sum().sum())) 
-            
-            var[sh]['Fuel consumption|Electricity|Gases|Fossil|Natural gas|CCS'] = h*MWh2TJ*(n.links_t.p0.filter(like ='gas CHP CC').filter(like =country).sum().sum()
-              *n.links_t.p1.filter(like ='gas CHP CC').filter(like =country).sum().sum()            
-               /(n.links_t.p1.filter(like ='gas CHP CC').filter(like =country).sum().sum()+n.links_t.p2.filter(like ='gas CHP CC').filter(like =country).sum().sum()))
+               # **CHP fuels calculated bsed on share of electricity and heat, 'nansum' is used in case thre is division by zero:                                               
+            var[sh]['Fuel consumption|Electricity|Gases|Fossil|Natural gas'] = np.nansum(
+                [h*MWh2TJ* (n.links_t.p0.filter(like ='OCGT').filter(like =country)).sum().sum(),
+                 h*MWh2TJ*(n.links_t.p0.filter(like ='CCGT').filter(like =country)).sum().sum(),
+                 h*MWh2TJ*(n.links_t.p0.filter(like ='gas CHP').filter(like =country).sum().sum()
+                   *n.links_t.p1.filter(like ='gas CHP').filter(like =country).sum().sum()             
+                  /(n.links_t.p1.filter(like ='gas CHP').filter(like =country).sum().sum()+
+                    n.links_t.p2.filter(like ='gas CHP').filter(like =country).sum().sum()))])
+            var[sh]['Fuel consumption|Electricity|Gases|Fossil|Natural gas|CCS'] = np.nansum(
+                [h*MWh2TJ*(n.links_t.p0.filter(like ='gas CHP CC').filter(like =country).sum().sum()
+                   *n.links_t.p1.filter(like ='gas CHP CC').filter(like =country).sum().sum()            
+                  /(n.links_t.p1.filter(like ='gas CHP CC').filter(like =country).sum().sum()+
+                    n.links_t.p2.filter(like ='gas CHP CC').filter(like =country).sum().sum()))])
             
             #Fuel :Biomass (CCS)                                                                 
-            var[sh]['Fuel consumption|Electricity|Solid bio and waste|Primary solid biomass'] = h*MWh2TJ*(n.links_t.p0.filter(like ='solid biomass CHP').filter(like =country).sum().sum()
-              *n.links_t.p1.filter(like ='solid biomass CHP').filter(like =country).sum().sum()            
-               /(n.links_t.p1.filter(like ='solid biomass CHP').filter(like =country).sum().sum()+n.links_t.p2.filter(like ='solid biomass CHP').filter(like =country).sum().sum()))
+            var[sh]['Fuel consumption|Electricity|Solid bio and waste|Primary solid biomass'] = np.nansum(
+                [h*MWh2TJ*(n.links_t.p0.filter(like ='solid biomass CHP').filter(like =country).sum().sum()
+                  *n.links_t.p1.filter(like ='solid biomass CHP').filter(like =country).sum().sum()            
+                  /(n.links_t.p1.filter(like ='solid biomass CHP').filter(like =country).sum().sum()+
+                  n.links_t.p2.filter(like ='solid biomass CHP').filter(like =country).sum().sum()))])
             var[sh]['Fuel consumption|Electricity|Solid bio and waste'] = var[sh]['Fuel consumption|Electricity|Solid bio and waste|Primary solid biomass']
             var[sh]['Fuel consumption|Electricty|Biomass'] = var[sh]['Fuel consumption|Electricity|Solid bio and waste']
+
             
-            var[sh]['Fuel consumption|Electricity|Solid bio and waste|Primary solid biomass|CCS'] = h*MWh2TJ*(n.links_t.p0.filter(like ='solid biomass CHP CC').filter(like =country).sum().sum()
-              *n.links_t.p1.filter(like ='solid biomass CHP CC').filter(like =country).sum().sum()            
-               /(n.links_t.p1.filter(like ='solid biomass CHP CC').filter(like =country).sum().sum()+n.links_t.p2.filter(like ='solid biomass CHP CC').filter(like =country).sum().sum()))            
+            var[sh]['Fuel consumption|Electricity|Solid bio and waste|Primary solid biomass|CCS'] = np.nansum(
+                [h*MWh2TJ*(n.links_t.p0.filter(like ='solid biomass CHP CC').filter(like =country).sum().sum()
+                *n.links_t.p1.filter(like ='solid biomass CHP CC').filter(like =country).sum().sum()            
+                /(n.links_t.p1.filter(like ='solid biomass CHP CC').filter(like =country).sum().sum()+
+                  n.links_t.p2.filter(like ='solid biomass CHP CC').filter(like =country).sum().sum()))])            
             var[sh]['Fuel consumption|Electricity|Solid bio and waste|CCS'] = var[sh]['Fuel consumption|Electricity|Solid bio and waste|Primary solid biomass|CCS']
-            var[sh]['Fuel consumption|Electricty|Biomass|CCS'] = var[sh]['Fuel consumption|Electricity|Solid bio and waste|CCS']            
+            var[sh]['Fuel consumption|Electricty|Biomass|CCS'] = var[sh]['Fuel consumption|Electricity|Solid bio and waste|CCS']                     
            
             #Fuel : Hydrogen            
             var[sh]['Fuel consumption|Electricity|Gases|Hydrogen'] = h*MWh2TJ*(n.links_t.p0.filter(like ='H2 Fuel Cell').filter(like =country)).sum().sum()
@@ -367,13 +372,17 @@ for scenario in scenarios:
 
             #Emissions : Natural gas(OCGT, CCGT, CHP, CHP CC, SMR, SMR CC)       
                                                                  
-            var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricity|Gases|Fossil|Natural gas'] = (1e-6)*(-1)*h*((n.links_t.p3.filter(like ='gas CHP').filter(like =country)).sum().sum()
+            var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricity|Gases|Fossil|Natural gas'] = np.nansum(
+                [(1e-6)*(-1)*h*((n.links_t.p3.filter(like ='gas CHP').filter(like =country)).sum().sum()
                  *n.links_t.p1.filter(like ='gas CHP').filter(like =country).sum().sum()             
-                 /(n.links_t.p1.filter(like ='gas CHP').filter(like =country).sum().sum()+n.links_t.p2.filter(like ='gas CHP').filter(like =country).sum().sum())) 
-            var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricity|Gases|Fossil|Natural gas|CCS'] = (1e-6)*(-1)*h*((n.links_t.p3.filter(like ='gas CHP CC').filter(like =country)).sum().sum()
+                 /(n.links_t.p1.filter(like ='gas CHP').filter(like =country).sum().sum()+
+                   n.links_t.p2.filter(like ='gas CHP').filter(like =country).sum().sum()))]) 
+            var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricity|Gases|Fossil|Natural gas|CCS'] = np.nansum(
+                [(1e-6)*(-1)*h*((n.links_t.p3.filter(like ='gas CHP CC').filter(like =country)).sum().sum()
                 *n.links_t.p1.filter(like ='gas CHP CC').filter(like =country).sum().sum()            
-                /(n.links_t.p1.filter(like ='gas CHP CC').filter(like =country).sum().sum()+n.links_t.p2.filter(like ='gas CHP CC').filter(like =country).sum().sum()))
-            
+                /(n.links_t.p1.filter(like ='gas CHP CC').filter(like =country).sum().sum()+
+                  n.links_t.p2.filter(like ='gas CHP CC').filter(like =country).sum().sum()))])
+                  
             var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricity|Gases|Fossil|Natural gas'] += (1e-6)*(-1)*h* (n.links_t.p2.filter(like ='OCGT').filter(like =country)).sum().sum()
             var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricity|Gases|Fossil|Natural gas'] += (1e-6)*(-1)*h*(n.links_t.p2.filter(like ='CCGT').filter(like =country)).sum().sum()
             
@@ -390,9 +399,11 @@ for scenario in scenarios:
             
             #CHP emissions are calculated based on share of electricity and heat:
             
-            var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricity|Solid bio and waste|Primary solid biomass'] = (1e-6)*(-1)*h*((n.links_t.p3.filter(like ='solid biomass CHP').filter(like =country)).sum().sum()
+            var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricity|Solid bio and waste|Primary solid biomass'] = np.nansum(
+                [(1e-6)*(-1)*h*((n.links_t.p3.filter(like ='solid biomass CHP').filter(like =country)).sum().sum()
                *n.links_t.p1.filter(like ='solid biomass CHP').filter(like =country).sum().sum()            
-               /(n.links_t.p1.filter(like ='solid biomass CHP').filter(like =country).sum().sum()+n.links_t.p2.filter(like ='solid biomass CHP').filter(like =country).sum().sum()))
+               /(n.links_t.p1.filter(like ='solid biomass CHP').filter(like =country).sum().sum()+
+                 n.links_t.p2.filter(like ='solid biomass CHP').filter(like =country).sum().sum()))])
             var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricity|Solid bio and waste'] = var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricity|Solid bio and waste|Primary solid biomass']
             var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricty|Biomass'] = var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricity|Solid bio and waste']                        
 
@@ -405,9 +416,11 @@ for scenario in scenarios:
             
             #CHP emissions are calculated based on share of electricity and heat:
             
-            var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricity|Solid bio and waste|Primary solid biomass|CCS'] = (1e-6)*(-1)*h*((n.links_t.p3.filter(like ='solid biomass CHP CC').filter(like =country)).sum().sum()
+            var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricity|Solid bio and waste|Primary solid biomass|CCS'] = np.nansum(
+                [(1e-6)*(-1)*h*((n.links_t.p3.filter(like ='solid biomass CHP CC').filter(like =country)).sum().sum()
                *n.links_t.p1.filter(like ='solid biomass CHP CC').filter(like =country).sum().sum()            
-               /(n.links_t.p1.filter(like ='solid biomass CHP CC').filter(like =country).sum().sum()+n.links_t.p2.filter(like ='solid biomass CHP CC').filter(like =country).sum().sum()))
+               /(n.links_t.p1.filter(like ='solid biomass CHP CC').filter(like =country).sum().sum()+
+                 n.links_t.p2.filter(like ='solid biomass CHP CC').filter(like =country).sum().sum()))])
             var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricity|Solid bio and waste|CCS'] = var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricity|Solid bio and waste|Primary solid biomass|CCS']
             var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricty|Biomass|CCS'] = var[sh]['Emissions|Kyoto gases|Fossil|CO2|Electricity|Solid bio and waste|CCS']                        
 
@@ -782,7 +795,7 @@ for scenario in scenarios:
         col=[c for c in ds_all[sh][1] if c.value=='Y_'+str(year_sub)][0].column
         for v in var[sh].keys():
           ro=[r for r in ds_all[sh]['D'] if r.value==v][0].row
-          if (n_eff_eu_uk[v]+n_eff_eu[v]+n_eff_all[v]) !=32 : ds_all[sh].cell(row=ro, column=col).value/= (32-n_eff_all[v]-n_eff_eu[v]-n_eff_eu_uk[v])
+          if (n_eff_eu_uk[v]+n_eff_eu[v]+n_eff_all[v]) !=33 : ds_all[sh].cell(row=ro, column=col).value/= (33-n_eff_all[v]-n_eff_eu[v]-n_eff_eu_uk[v])
                 
         sh=sheets['Demand_final_energy']    #Aviation fuek demand is a single bus for all countries (not just EU27+Uk) but it's added to EU_UK sheet for best accuracy (TODO: enhance accuracy)
         col=[c for c in ds_eu_uk[sh][1] if c.value=='Y_'+str(year_sub)][0].column
