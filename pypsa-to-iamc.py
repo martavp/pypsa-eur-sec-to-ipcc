@@ -185,8 +185,7 @@ for scenario in scenarios:
                 
             #Capacity :Biomass (CCS)                                                                 
             var[sh]['Installed capacity|Electricity|Solid bio and waste|Primary solid biomass'] = MW2GW*((n.links.efficiency.filter(like ='solid biomass CHP').filter(like =country)
-                 *n.links.p_nom_opt.filter(like ='solid biomass CHP').filter(like =country)).sum()+(n.links.efficiency.filter(like ='solid biomass CHP CC').filter(like =country)
-                 *n.links.p_nom_opt.filter(like ='solid biomass CHP CC').filter(like =country)).sum()) 
+                 *n.links.p_nom_opt.filter(like ='solid biomass CHP').filter(like =country)).sum()) 
             var[sh]['Installed capacity|Electricity|Solid bio and waste'] = var[sh]['Installed capacity|Electricity|Solid bio and waste|Primary solid biomass']
             var[sh]['Installed capacity|Electricty|Biomass'] = var[sh]['Installed capacity|Electricity|Solid bio and waste']
             
