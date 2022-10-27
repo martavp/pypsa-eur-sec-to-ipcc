@@ -9,7 +9,7 @@ import openpyxl
 import pandas as pd
 
 #original IPCC file, official template
-path = "global_sectoral/global_sectoral/IPCC_AR6_WG3_Global_sectoral_Pathways_scenario_template_v3.1_20221027.xlsx"
+path = "global_sectoral/global_sectoral/IPCC_AR6_WG3_Global_sectoral_Pathways_scenario_template_v3.1.xlsx"
 #use the official template
 
 model = "PyPSA-Eur-Sec 0.0.2"
@@ -25,43 +25,11 @@ scenarios =['Early and Steady',
             'District heating expansion',
             'Space heat savings due to building renovation',
             'Transmission expansion after 2030',
-            'Including road and rail transport'
-            ]
+            'Including road and rail transport']
 
 years = [2020, 2025, 2030, 2035, 2040, 2045, 2050]
-countries = ['AT','BE','BG','CH','CZ','DE','DK','EE','ES','FI','FR','GB','GR','HR',
-             'HU','IT','LT','LU','LV','NO','PL','PT','RO','SE','SI','SK','IE', 'NL',
-             #'RS','BA'
-             ] 
-
-iso2name={'AT':'Austria',
-          'BE':'Belgium',
-          'BG':'Bulgaria',
-          'CH':'Switzerland',
-          'CZ':'Czech Republic',
-          'DE':'Germany',
-          'DK':'Denmark',
-          'EE':'Estonia',
-          'ES':'Spain',
-          'FI':'Finland',
-          'FR':'France',
-          'GB':'United Kingdom',
-          'GR':'Greece',
-          'HR':'Croatia',
-          'HU':'Hungary',
-          'IT':'Italy',
-          'LT':'Lithuania',
-          'LU':'Luxembourg',
-          'LV':'Latvia',
-          'NO':'Norway',
-          'PL':'Poland',
-          'PT':'Portugal',
-          'RO':'Romania',
-          'SE':'Sweden',
-          'SI':'Slovenia',
-          'SK':'Slovakia',
-          'IE':'Ireland',
-          'NL':'The Netherlands',}
+countries = ['AT','BA','BE','BG','CH','CZ','DE','DK','EE','ES','FI','FR','GB','GR','HR',
+             'HU','IT','LT','LU','LV','NO','PL','PT','RO','SE','SI','SK','IE', 'NL','RS',] 
 
 for scenario in scenarios:
     #one excel file per scenario
@@ -169,15 +137,12 @@ for scenario in scenarios:
             """
             #MWh to GWh
             var['Capacity|Electricity|Storage|Pumped Hydro Storage'] = 0.001 *n.storage_units.p_nom_opt[country + ' PHS'] if country + ' PHS' in n.storage_units.index else 0
-            var['Capacity|Electricity|Storage|Battery Capacity|Utility-scale Battery'] = 0.001 *n.stores.e_nom_opt[country + ' battery'] if country + ' battery' in n.stores.index else 0
-            var['Capacity|Electricity|Storage|Battery Capacity'] = var['Capacity|Electricity|Storage|Battery Capacity|Utility-scale Battery']
-            #variable Hydrogen Storage Capacity not included in EU Climate Advisory Board Scenario Explorer
-            #var['Capacity|Electricity|Storage|Hydrogen Storage Capacity|overground'] = 0.001 *n.stores.e_nom_opt[country + ' H2 Store tank'] if country + ' H2 Store tank' in n.stores.index else 0
-            #var['Capacity|Electricity|Storage|Hydrogen Storage Capacity|underground'] = 0.001 *n.stores.e_nom_opt[country + ' H2 Store underground'] if country + ' H2 Store underground' in n.stores.index else 0
-            #var['Capacity|Electricity|Storage|Hydrogen Storage Capacity'] = (var['Capacity|Electricity|Storage|Hydrogen Storage Capacity|overground']
-            #                                                                + var['Capacity|Electricity|Storage|Hydrogen Storage Capacity|underground'])
-            var['Capacity|Electricity|Storage|Hydrogen Storage Capacity'] = (0.001 *n.stores.e_nom_opt[country + ' H2 Store tank'] if country + ' H2 Store tank' in n.stores.index else 0
-            + 0.001 *n.stores.e_nom_opt[country + ' H2 Store underground'] if country + ' H2 Store underground' in n.stores.index else 0)
+            var['Capacity|Electricity|Storage|Battery Capacity|Utility-scale Battery '] = 0.001 *n.stores.e_nom_opt[country + ' battery'] if country + ' battery' in n.stores.index else 0
+            var['Capacity|Electricity|Storage|Battery Capacity'] = var['Capacity|Electricity|Storage|Battery Capacity|Utility-scale Battery ']
+            var['Capacity|Electricity|Storage|Hydrogen Storage Capacity|overground'] = 0.001 *n.stores.e_nom_opt[country + ' H2 Store tank'] if country + ' H2 Store tank' in n.stores.index else 0
+            var['Capacity|Electricity|Storage|Hydrogen Storage Capacity|underground'] = 0.001 *n.stores.e_nom_opt[country + ' H2 Store underground'] if country + ' H2 Store underground' in n.stores.index else 0
+            var['Capacity|Electricity|Storage|Hydrogen Storage Capacity'] = (var['Capacity|Electricity|Storage|Hydrogen Storage Capacity|overground']
+                                                                            + var['Capacity|Electricity|Storage|Hydrogen Storage Capacity|underground'])
             var['Capacity|Electricity|Storage Capacity'] = ( var['Capacity|Electricity|Storage|Pumped Hydro Storage']
                                                             +  var['Capacity|Electricity|Storage|Battery Capacity']
                                                             + var['Capacity|Electricity|Storage|Hydrogen Storage Capacity'])
@@ -239,8 +204,8 @@ for scenario in scenarios:
                 var[metric + '|Electricity|Gas|w/o CCS'] = factor * costs.loc[('OCGT', ipcc2pypsa[metric]),'value']
                 var[metric + '|Electricity|Hydro'] = factor * costs.loc[('hydro', ipcc2pypsa[metric]),'value']
                 var[metric + '|Electricity|Storage|Pumped Hydro Storage'] = factor * costs.loc[('PHS', ipcc2pypsa[metric]),'value']
-                var[metric + '|Electricity|Storage|Battery Capacity|Utility-scale Battery'] = factor * costs.loc[('battery storage', ipcc2pypsa[metric]),'value']
-                var[metric + '|Electricity|Storage|Battery Capacity'] = var [metric + '|Electricity|Storage|Battery Capacity|Utility-scale Battery']
+                var[metric + '|Electricity|Storage|Battery Capacity|Utility-scale Battery '] = factor * costs.loc[('battery storage', ipcc2pypsa[metric]),'value']
+                var[metric + '|Electricity|Storage|Battery Capacity'] = var [metric + '|Electricity|Storage|Battery Capacity|Utility-scale Battery ']
                 var[metric + '|Heating|Heat pumps'] = factor * costs.loc[('decentral air-sourced heat pump', ipcc2pypsa[metric]),'value']
                 var[metric + '|Heating|Electric boilers'] = factor * costs.loc[('decentral resistive heater', ipcc2pypsa[metric]),'value']
                 var[metric + '|Gas|Synthetic'] = factor * costs.loc[('methanation', ipcc2pypsa[metric]),'value']
@@ -252,12 +217,12 @@ for scenario in scenarios:
             #there is a spelling error with variables overground/underground with capital/small intitial
             # the following lines can be included in the loop when the spelling mistake is corrected
             metric='Capital Cost'
-            #var[metric + '|Electricity|Storage|Hydrogen Storage Capacity|overground'] = factor * costs.loc[('hydrogen storage tank', ipcc2pypsa[metric]),'value']
-            #var[metric + '|Electricity|Storage|Hydrogen Storage Capacity|underground'] = factor * costs.loc[('hydrogen storage underground', ipcc2pypsa[metric]),'value']
+            var[metric + '|Electricity|Storage|Hydrogen Storage Capacity|overground'] = factor * costs.loc[('hydrogen storage tank', ipcc2pypsa[metric]),'value']
+            var[metric + '|Electricity|Storage|Hydrogen Storage Capacity|underground'] = factor * costs.loc[('hydrogen storage underground', ipcc2pypsa[metric]),'value']
             
             metric='Lifetime'
-            #var[metric + '|Electricity|Storage|Hydrogen Storage Capacity|Overground'] = factor * costs.loc[('hydrogen storage tank', ipcc2pypsa[metric]),'value']
-            #var[metric + '|Electricity|Storage|Hydrogen Storage Capacity|Underground'] = factor * costs.loc[('hydrogen storage underground', ipcc2pypsa[metric]),'value']
+            var[metric + '|Electricity|Storage|Hydrogen Storage Capacity|Overground'] = factor * costs.loc[('hydrogen storage tank', ipcc2pypsa[metric]),'value']
+            var[metric + '|Electricity|Storage|Hydrogen Storage Capacity|Underground'] = factor * costs.loc[('hydrogen storage underground', ipcc2pypsa[metric]),'value']
             
             """
             OM Cost
@@ -274,10 +239,10 @@ for scenario in scenarios:
             var['OM Cost|Fixed|Electricity|Gas|w/o CCS'] = factor * 0.01*costs.loc[('OCGT', 'FOM'),'value']*costs.loc[('OCGT', 'investment'),'value']
             var['OM Cost|Fixed|Electricity|Hydro'] = factor * 0.01*costs.loc[('hydro', 'FOM'),'value']*costs.loc[('hydro', 'investment'),'value']
             var['OM Cost|Electricity|Storage|Pumped Hydro Storage'] = factor * 0.01*costs.loc[('PHS', 'FOM'),'value']*costs.loc[('PHS', 'investment'),'value']
-            var['OM Cost|Electricity|Storage|Battery Capacity|Utility-scale Battery'] = factor * 0.01*costs.loc[('battery storage', 'FOM'),'value']*costs.loc[('battery storage', 'investment'),'value']
-            var['OM Cost|Electricity|Storage|Battery Capacity'] = var [metric + '|Electricity|Storage|Battery Capacity|Utility-scale Battery']
-            #var['OM Cost|Electricity|Storage|Hydrogen Storage Capacity|Overground'] = factor * 0.01*costs.loc[('hydrogen storage tank', 'FOM'),'value']*costs.loc[('hydrogen storage tank', 'investment'),'value']
-            #var['OMCost|Electricity|Storage|Hydrogen Storage Capacity|Underground'] = factor * 0.01*costs.loc[('hydrogen storage underground', 'FOM'),'value']*costs.loc[('hydrogen storage underground', 'investment'),'value']
+            var['OM Cost|Electricity|Storage|Battery Capacity|Utility-scale Battery '] = factor * 0.01*costs.loc[('battery storage', 'FOM'),'value']*costs.loc[('battery storage', 'investment'),'value']
+            var['OM Cost|Electricity|Storage|Battery Capacity'] = var [metric + '|Electricity|Storage|Battery Capacity|Utility-scale Battery ']
+            var['OM Cost|Electricity|Storage|Hydrogen Storage Capacity|Overground'] = factor * 0.01*costs.loc[('hydrogen storage tank', 'FOM'),'value']*costs.loc[('hydrogen storage tank', 'investment'),'value']
+            var['OMCost|Electricity|Storage|Hydrogen Storage Capacity|Underground'] = factor * 0.01*costs.loc[('hydrogen storage underground', 'FOM'),'value']*costs.loc[('hydrogen storage underground', 'investment'),'value']
             var['OM Cost|Heating|Heat pumps'] =factor * 0.01*costs.loc[('decentral air-sourced heat pump', 'FOM'),'value']*costs.loc[('decentral air-sourced heat pump', 'investment'),'value']
             var['OM Cost|Heating|Electric boilers'] = factor * 0.01*costs.loc[('decentral resistive heater', 'FOM'),'value']*costs.loc[('decentral resistive heater', 'investment'),'value']
             var['OM Cost|Gas|Synthetic'] = factor * 0.01*costs.loc[('methanation', 'FOM'),'value']*costs.loc[('methanation', 'investment'),'value']
@@ -301,12 +266,12 @@ for scenario in scenarios:
                 ds.cell(row=ro, column=col).value = round(var[v],3) 
                 ds.cell(row=ro, column=1).value = model
                 ds.cell(row=ro, column=2).value = scenario
-                ds.cell(row=ro, column=3).value = iso2name[country] #region
+                ds.cell(row=ro, column=3).value = country #region
     # add scenario name to 'meta_scenario' sheet
     ds2 = file['meta_scenario']
     ds2.cell(row=4, column=2).value = scenario
     if (scenario != 'Early and Steady' and scenario !='Late and Rapid'):
         ds2.cell(row=4, column=3).value ='Early and Steady'
         
-    file.save("uploaded_to_EU_Climate_Advisory_Board_Scenario_Explorer/IPCC_AR6_WG3_Global_sectoral_Pathways_scenario_template_v3.1_{}.xlsx".format(scenario))
+    file.save("uploaded_to_IPCC_AR6/IPCC_AR6_WG3_Global_sectoral_Pathways_scenario_template_v3.1_{}.xlsx".format(scenario))
 
