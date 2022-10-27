@@ -21,11 +21,11 @@ scenario_short_name={'Early and Steady':'Base',
                      'Transmission expansion after 2030':'w_Tran_exp',
                      'Including road and rail transport':'w_EV_exp'}
 scenarios =['Early and Steady',
-            'Late and Rapid',
-            'District heating expansion',
-            'Space heat savings due to building renovation',
-            'Transmission expansion after 2030',
-            'Including road and rail transport'
+#            'Late and Rapid',
+#            'District heating expansion',
+#            'Space heat savings due to building renovation',
+#            'Transmission expansion after 2030',
+#            'Including road and rail transport'
             ]
 
 years = [2020, 2025, 2030, 2035, 2040, 2045, 2050]
