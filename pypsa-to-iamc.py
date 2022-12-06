@@ -59,29 +59,30 @@ MW2GW=0.001
 path = "format/IAMC_format.xlsx"
 
 model = "PyPSA-Eur-Sec 0.6.0"
-scenarios ={'Early neutrality scenario':'-cb25.7ex0',
-            'Climate neutrality scenario':'-cb45.0ex0',
-            'Current trends':''}   #defines carbon budget for each scenario
-years = [2020, 2030, 2050]  
+scenarios ={'test scenario':'-cb25.7ex0',
+            #'Climate neutrality scenario':'-cb45.0ex0',
+            #'Current trends':''
+            }   #defines carbon budget for each scenario
+years = [2020]  
 
-sheets={"installed_capacity":0,
-        "fuel_consumption_supply":1,
-        "Emissions_supply":2,
-        "Yearly_generation_supply":3,
-        "Winter_peak_generation":4,
-        "summer_peak_generation":5,
-        "Percentile50_generation":6,
-        "Percentile25_generation":7,
-        "Investments":8,
-        "Demand_final_energy":9,
-        "Demand_emissions":10,
-        "Percentile_25_consumpt":11,
-        "Percentile_50_consumpt":12,
-        "Summer_peak_consumpt":13,
-        "Winter_peak_consumpt":14,
-        "Efficiency_demand":15,
-        "Efficiency_supply":16,
-        "Other_variables":17}
+sheets={"data_installed_capacity":0,
+        "data_fuel_consumption_supply":1,
+        "data_Emissions_supply":2,
+        "data_Yearly_generation_supply":3,
+        "data_Winter_peak_generation":4,
+        "data_summer_peak_generation":5,
+        "data_Percentile50_generation":6,
+        "data_Percentile25_generation":7,
+        "data_Investments":8,
+        "data_Demand_final_energy":9,
+        "data_Demand_emissions":10,
+        "data_Percentile_25_consumpt":11,
+        "data_Percentile_50_consumpt":12,
+        "data_Summer_peak_consumpt":13,
+        "data_Winter_peak_consumpt":14,
+        "data_Efficiency_demand":15,
+        "data_Efficiency_supply":16,
+        "data_Other_variables":17}
 
             
 sheet_var={"installed_capacity":'Installed capacity',

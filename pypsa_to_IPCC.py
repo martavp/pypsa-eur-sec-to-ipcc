@@ -9,26 +9,28 @@ import openpyxl
 import pandas as pd
 
 #original IPCC file, official template
-path = "global_sectoral/global_sectoral/IPCC_AR6_WG3_Global_sectoral_Pathways_scenario_template_v3.1_20221027.xlsx"
+template_path = "global_sectoral/IPCC_AR6_WG3_Global_sectoral_Pathways_scenario_template_v3.1_20221027.xlsx"
 #use the official template
 
+# Metadata
 model = "PyPSA-Eur-Sec 0.0.2"
+model_version = "0.0.6"
+literature_reference = "Pedersen, T. T., Gøtske, E. K., Dvorak, A., Andresen, G. B., & Victoria, M. (2022). Long-term implications of reduced gas imports on the decarbonization of the European energy system. Joule, 6(7), 1566-1580."
+climate_target = 21 # CO2 budget
+
 wind_split = ['DE', 'ES', 'FI', 'FR', 'GB', 'IT', 'NO', 'PL', 'RO', 'SE']
-scenario_short_name={'Early and Steady':'Base',
-                     'Late and Rapid':'Base',
-                     'District heating expansion':'w_DH_exp',
-                     'Space heat savings due to building renovation': 'w_Retro',
-                     'Transmission expansion after 2030':'w_Tran_exp',
-                     'Including road and rail transport':'w_EV_exp'}
-scenarios =['Early and Steady',
-#            'Late and Rapid',
-#            'District heating expansion',
-#            'Space heat savings due to building renovation',
-#            'Transmission expansion after 2030',
-#            'Including road and rail transport'
-            ]
+
+scenarios={'Base_1.5':'postnetworks/elec_s370_37m_lv1.0__3H-T-H-B-I-solar+p3-dist1-cb25.7ex0_',
+            'Gaslimit_1.5':'postnetworks/elec_s370_37m_lv1.0__3H-T-H-B-I-solar+p3-dist1-cb25.7ex0-gasconstrained_',
+            'Base_2':'postnetworks/elec_s370_37m_lv1.0__3H-T-H-B-I-solar+p3-dist1-cb73.9ex0_',
+            'Gaslimit_2': 'postnetworks/elec_s370_37m_lv1.0__3H-T-H-B-I-solar+p3-dist1-cb73.9ex0-gasconstrained_',
+                     }
+
+
+output_folder = 'results/'
 
 years = [2020, 2025, 2030, 2035, 2040, 2045, 2050]
+
 countries = ['AT','BE','BG','CH','CZ','DE','DK','EE','ES','FI','FR','GB','GR','HR',
              'HU','IT','LT','LU','LV','NO','PL','PT','RO','SE','SI','SK','IE', 'NL',
              #'RS','BA'
@@ -65,19 +67,11 @@ iso2name={'AT':'Austria',
 
 for scenario in scenarios:
     #one excel file per scenario
-    file = openpyxl.load_workbook(path)
+    file = openpyxl.load_workbook(template_path)
     ds = file['data'] #data sheet
     for year in years:
-        if scenario == 'Early and Steady':
-            n=pypsa.Network('data/version-{}/postnetworks/postnetwork-go_TYNDP_{}.nc'.format(scenario_short_name[scenario], year))
-        elif scenario == 'Late and Rapid':
-            n=pypsa.Network('data/version-{}/postnetworks/postnetwork-wait_TYNDP_{}.nc'.format(scenario_short_name[scenario], year))
-        elif scenario == 'Transmission expansion after 2030':
-            n=pypsa.Network('data/version-{}/postnetworks/postnetwork-go_opt_{}.nc'.format(scenario_short_name[scenario], year))
-        else:
-            n=pypsa.Network('data/version-{}/postnetworks/postnetwork-go_TYNDP_{}.nc'.format(scenario_short_name[scenario], year))
-        
-        costs = pd.read_csv("data/costs/costs_{}.csv".format(year), index_col=[0,1])
+        n = pypsa.Network(f"{scenarios[scenario]}{year}.nc")
+        costs = pd.read_csv(f"costs/costs_{year}.csv", index_col=[0,1])
         
         col=[c for c in ds[1] if c.value==year][0].column
         
@@ -305,8 +299,12 @@ for scenario in scenarios:
     # add scenario name to 'meta_scenario' sheet
     ds2 = file['meta_scenario']
     ds2.cell(row=4, column=2).value = scenario
-    if (scenario != 'Early and Steady' and scenario !='Late and Rapid'):
-        ds2.cell(row=4, column=3).value ='Early and Steady'
+    ds2.cell(row=4, column=4).value = model
+    ds2.cell(row=4, column=5).value = model_version
+    ds2.cell(row=4, column=10).value = literature_reference
+    ds2.cell(row=4, column=14).value = climate_target
+
+ 
         
-    file.save("uploaded_to_EU_Climate_Advisory_Board_Scenario_Explorer/IPCC_AR6_WG3_Global_sectoral_Pathways_scenario_template_v3.1_{}.xlsx".format(scenario))
+    file.save(f"{output_folder}/IPCC_AR6_{scenario}.xlsx")
 
