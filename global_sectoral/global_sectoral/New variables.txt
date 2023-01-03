@@ -1,5 +1,0 @@
-New variables to be added
-
-Gas boilers
-Fuel cells
-Split heat pumps, heat resitors and gas boilers in central/decentral
