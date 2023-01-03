@@ -7,29 +7,42 @@ IPCC AR6 database
 import pypsa
 import openpyxl
 import pandas as pd
+import yaml
+from itertools import product
+
+# Read the pypsa-eur-sec config file
+with open('config.yaml') as yamlfile:
+    config = yaml.load(yamlfile,Loader=yaml.FullLoader)
 
 #original IPCC file, official template
 template_path = "global_sectoral/IPCC_AR6_WG3_Global_sectoral_Pathways_scenario_template_v3.1_20221027.xlsx"
 #use the official template
 
 # Metadata
-model = "PyPSA-Eur-Sec 0.0.2"
-model_version = "0.0.6"
+model = "PyPSA-Eur-Sec"
+model_version = config['version']
 literature_reference = "Pedersen, T. T., Gøtske, E. K., Dvorak, A., Andresen, G. B., & Victoria, M. (2022). Long-term implications of reduced gas imports on the decarbonization of the European energy system. Joule, 6(7), 1566-1580."
-climate_target = 21 # CO2 budget
+sector_opts = config['scenario']['sector_opts']
+
 
 wind_split = ['DE', 'ES', 'FI', 'FR', 'GB', 'IT', 'NO', 'PL', 'RO', 'SE']
 
-scenarios={'Base_1.5':'postnetworks/elec_s370_37m_lv1.0__3H-T-H-B-I-solar+p3-dist1-cb25.7ex0_',
-            'Gaslimit_1.5':'postnetworks/elec_s370_37m_lv1.0__3H-T-H-B-I-solar+p3-dist1-cb25.7ex0-gasconstrained_',
-            'Base_2':'postnetworks/elec_s370_37m_lv1.0__3H-T-H-B-I-solar+p3-dist1-cb73.9ex0_',
-            'Gaslimit_2': 'postnetworks/elec_s370_37m_lv1.0__3H-T-H-B-I-solar+p3-dist1-cb73.9ex0-gasconstrained_',
-                     }
+keys, values = zip(*config['scenario'].items())
+permutations_dicts = [dict(zip(keys, v)) for v in product(*values)]
+scenarios = []
+for scenario_i in permutations_dicts:
+    scenarios.append("elec_s{simpl}_{clusters}_lv{lv}_{opts}_{sector_opts}_".format(**scenario_i))
+
+#scenarios={'Base_1.5':'postnetworks/elec_s370_37m_lv1.0__3H-T-H-B-I-solar+p3-dist1-cb25.7ex0_',
+#            'Gaslimit_1.5':'postnetworks/elec_s370_37m_lv1.0__3H-T-H-B-I-solar+p3-dist1-cb25.7ex0-gasconstrained_',
+#            'Base_2':'postnetworks/elec_s370_37m_lv1.0__3H-T-H-B-I-solar+p3-dist1-cb73.9ex0_',
+#            'Gaslimit_2': 'postnetworks/elec_s370_37m_lv1.0__3H-T-H-B-I-solar+p3-dist1-cb73.9ex0-gasconstrained_',
+#                     }
 
 
 output_folder = 'results/'
 
-years = [2020, 2025, 2030, 2035, 2040, 2045, 2050]
+years = config['scenario']['planning_horizons']
 
 countries = ['AT','BE','BG','CH','CZ','DE','DK','EE','ES','FI','FR','GB','GR','HR',
              'HU','IT','LT','LU','LV','NO','PL','PT','RO','SE','SI','SK','IE', 'NL',
@@ -70,7 +83,7 @@ for scenario in scenarios:
     file = openpyxl.load_workbook(template_path)
     ds = file['data'] #data sheet
     for year in years:
-        n = pypsa.Network(f"{scenarios[scenario]}{year}.nc")
+        n = pypsa.Network(f"postnetworks/{scenario}{year}.nc")
         costs = pd.read_csv(f"costs/costs_{year}.csv", index_col=[0,1])
         
         col=[c for c in ds[1] if c.value==year][0].column
@@ -302,7 +315,11 @@ for scenario in scenarios:
     ds2.cell(row=4, column=4).value = model
     ds2.cell(row=4, column=5).value = model_version
     ds2.cell(row=4, column=10).value = literature_reference
-    ds2.cell(row=4, column=14).value = climate_target
+    try:
+        climate_target = float(scenario[scenario.find('cb')+2:scenario.find('cb')+6])
+        ds2.cell(row=4, column=14).value = climate_target
+    except: 
+        pass
 
  
         
