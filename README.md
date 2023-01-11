@@ -25,3 +25,4 @@ scenarios={'Base_1.5':'postnetworks/elec_s370_37m_lv1.0__3H-T-H-B-I-solar+p3-dis
 
 Running the script will result in a single .xlsx file per scenario located in the results folder. 
 
+The variables relevant for PyPSA-Eur-Sec are the following:
