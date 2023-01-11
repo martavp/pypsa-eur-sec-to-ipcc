@@ -4,7 +4,7 @@ This repository contains scripts to export IAMC format datafiles from PyPSA-Eur-
 
 Formatting follows the requirements for the IPCC AR6 database that can be found here: [IPCC AR6 documentation](https://data.ene.iiasa.ac.at/ar6-scenario-submission/#/about)
 
-[Information on the IAMC databeses](https://software.ene.iiasa.ac.at/ixmp-server/tutorials.html)
+[Information on the IAMC databases](https://software.ene.iiasa.ac.at/ixmp-server/tutorials.html)
 
 ## Exporting a dataset
 
@@ -24,3 +24,4 @@ scenarios={'Base_1.5':'postnetworks/elec_s370_37m_lv1.0__3H-T-H-B-I-solar+p3-dis
 ~~~
 
 Running the script will result in a single .xlsx file per scenario located in the results folder. 
+
