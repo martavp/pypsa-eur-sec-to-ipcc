@@ -10,6 +10,10 @@ import pandas as pd
 import yaml
 from itertools import product
 
+MWh2EJ=3.6e-9     #convert MWh to EJ
+TWh2TJ=3.6e+3   #convert TWh to TJ
+MW2GW=0.001
+
 # Read the pypsa-eur-sec config file
 with open('config.yaml') as yamlfile:
     config = yaml.load(yamlfile,Loader=yaml.FullLoader)
@@ -25,7 +29,6 @@ literature_reference = "Pedersen, T. T., Gøtske, E. K., Dvorak, A., Andresen, G
 sector_opts = config['scenario']['sector_opts']
 
 
-wind_split = ['DE', 'ES', 'FI', 'FR', 'GB', 'IT', 'NO', 'PL', 'RO', 'SE']
 
 keys, values = zip(*config['scenario'].items())
 permutations_dicts = [dict(zip(keys, v)) for v in product(*values)]
@@ -77,6 +80,25 @@ iso2name={'AT':'Austria',
           'SK':'Slovakia',
           'IE':'Ireland',
           'NL':'The Netherlands',}
+
+dict_industry= {
+   'Cement':['Cement'],
+   'Chemicals|Ammonia':['Ammonia'],
+   'Chemicals|High value chemicals': ['HVC'],
+   'Chemicals|Methanol':['Methanol'],
+   'Chemicals|Other': ['Other chemicals'],
+   'Non-ferrous metals':['Aluminium - primary production','Aluminium - secondary production','Other non-ferrous metals'],
+   'Other': ['Other Industrial Sectors'],
+   'Pulp and Paper' : ['Pulp production','Paper production'],
+   'Steel' :['Electric arc','DRI + Electric arc','Integrated steelworks']}
+
+industry_inputs= {
+    'Electricity':['elec'],
+    'Gases|Fossil':['methane'],
+    'Heat':['heat'],
+    'Hydrogen':['hydrogen'],
+    'Liquids|Fossil':['naphtha'],
+    'Solids':['coal','coke','biomass']}
 
 for scenario in scenarios:
     #one excel file per scenario
