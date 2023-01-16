@@ -104,14 +104,17 @@ for scenario in scenarios:
     #one excel file per scenario
     file = openpyxl.load_workbook(template_path)
     ds = file['data'] #data sheet
+    ratios = pd.read_csv("resources/industry_sector_ratios.csv",index_col=0,header=0,)
+
     for year in years:
         n = pypsa.Network(f"postnetworks/{scenario}{year}.nc")
         costs = pd.read_csv(f"costs/costs_{year}.csv", index_col=[0,1])
-        
+        prod = pd.read_csv("resources/industrial_production_elec_s_37_{}.csv".format(year),index_col=0,header=0,)  #s_37 ?? 
+        industry_demand=pd.read_table('resources/industrial_energy_demand_elec_s370_37m_{}.csv'.format(year),delimiter=',',index_col=0)
         col=[c for c in ds[1] if c.value==year][0].column
         
         for i,country in enumerate(countries):
-            if year == 2020:
+            if year == years[0]:
                 #one datasheet per country including information from different years
                 target = file.copy_worksheet(file['data'])
                 target.title ='data' + str(i)
