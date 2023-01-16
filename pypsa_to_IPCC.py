@@ -109,7 +109,7 @@ for scenario in scenarios:
     for year in years:
         n = pypsa.Network(f"postnetworks/{scenario}{year}.nc")
         costs = pd.read_csv(f"costs/costs_{year}.csv", index_col=[0,1])
-        prod = pd.read_csv("resources/industrial_production_elec_s_37_{}.csv".format(year),index_col=0,header=0,)  #s_37 ?? 
+        prod = pd.read_csv("resources/industrial_production_elec_s_37_{}.csv".format(year),index_col=0,header=0,)  #s_37  
         industry_demand=pd.read_table('resources/industrial_energy_demand_elec_s370_37m_{}.csv'.format(year),delimiter=',',index_col=0)
         col=[c for c in ds[1] if c.value==year][0].column
         
@@ -303,7 +303,7 @@ for scenario in scenarios:
                              var['Final Energy|Industry|'+industry+'|'+v_type]+=ratios[industry_name][v_name]*prod[industry_name].filter(like=country).sum()
   
             var['Final Energy|Industry|Electricity']=MWh2EJ*h*(n.loads_t.p.filter(like ='industry electricity').filter(like =country).sum().sum())    
-            var['Final Energy|Industry|Gases|Fossil'] = MWh2EJ*industry_demand['methane'].filter(like=country).sum()  #other sectors that use gas??
+            var['Final Energy|Industry|Gases|Fossil'] = MWh2EJ*industry_demand['methane'].filter(like=country).sum()  
             var['Final Energy|Industry|Heat']=MWh2EJ*h*(n.loads_t.p.filter(like ='low-temperature heat for industry').filter(like =country).sum().sum())
             var['Final Energy|Industry|Hydrogen']=MWh2EJ*h*(n.loads_t.p.filter(like ='H2 for industry').filter(like =country).sum().sum())
             var['Final Energy|Industry|Liquids|Oil']= MWh2EJ*industry_demand['naphtha'].filter(like=country).sum()
@@ -483,9 +483,9 @@ for scenario in scenarios:
             var['Carbon Intensity|Production|Chemicals|Other']=t2Mt*ratios['Other chemicals']['process emission']*prod['Other chemicals'].filter(like=country).sum()
             var['Carbon Intensity|Production|Non-ferrous metals']=(t2Mt*ratios['Aluminium - primary production']['process emission']*prod['Aluminium - primary production'].filter(like=country).sum()+
                    t2Mt*ratios['Other non-ferrous metals']['process emission']*prod['Other non-ferrous metals'].filter(like=country).sum())/2
-            var['Carbon Intensity|Production|Other']=t2Mt*ratios['Other Industrial Sectors']['process emission']*prod['Other Industrial Sectors'].filter(like=country).sum()  #not really all the others??
+            var['Carbon Intensity|Production|Other']=t2Mt*ratios['Other Industrial Sectors']['process emission']*prod['Other Industrial Sectors'].filter(like=country).sum()  
             var['Carbon Intensity|Production|Pulp and Paper']=(t2Mt*ratios['Pulp production']['process emission']*prod['Pulp production'].filter(like=country).sum()+
-                  t2Mt*ratios['Paper production']['process emission']*prod['Paper production'].filter(like=country).sum())/2  #It's zero ??
+                  t2Mt*ratios['Paper production']['process emission']*prod['Paper production'].filter(like=country).sum())/2  
             var['Carbon Intensity|Production|Steel']=(t2Mt*ratios['Electric arc']['process emission']*prod['Electric arc'].filter(like=country).sum()
                  +t2Mt*ratios['DRI + Electric arc']['process emission']*prod['DRI + Electric arc'].filter(like=country).sum()
                  +t2Mt*ratios['Integrated steelworks']['process emission']*prod['Integrated steelworks'].filter(like=country).sum())/3
@@ -495,7 +495,7 @@ for scenario in scenarios:
             """
             var['Carbon Sequestration|CCS|Biomass']=t2Mt*h*n.links_t.p4.filter(like='biomass CHP CC').filter(like=country).sum().sum()
             var['Carbon Sequestration|CCS|Fossil']=t2Mt*h*(-1)*(n.links_t.p3.filter(like='gas CHP CC').filter(like=country).sum().sum()
-                                        +n.links_t.p4.filter(like='gas CHP CC').filter(like=country).sum().sum())  #??
+                                        +n.links_t.p4.filter(like='gas CHP CC').filter(like=country).sum().sum()) 
             var['Carbon Sequestration|CCS|Industrial Processes']=t2Mt*h*(-1)*n.links_t.p3.filter(like='SMR CC').filter(like=country).sum().sum()
             var['Carbon Sequestration|Direct Air Capture']=t2Mt*h*n.links_t.p0.filter(like='DAC').filter(like=country).sum().sum()
             var['Carbon Sequestration|CCS']=(var['Carbon Sequestration|CCS|Biomass']
@@ -504,7 +504,7 @@ for scenario in scenarios:
                                  +var['Carbon Sequestration|Direct Air Capture'])
             var['Carbon Utilization|CCS|Industry']= t2Mt*h*(n.links_t.p2.filter(like='Sabatier').filter(like=country).sum().sum()
                                                     +n.links_t.p2.filter(like='helmeth').filter(like=country).sum().sum()
-                                                     +n.links_t.p2.filter(like='Fischer-Tropsch').filter(like=country).sum().sum()) #?? 
+                                                     +n.links_t.p2.filter(like='Fischer-Tropsch').filter(like=country).sum().sum()) 
 
 
             for v in var.keys():
