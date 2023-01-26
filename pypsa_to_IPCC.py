@@ -414,12 +414,15 @@ for scenario in scenarios:
                                          n.links.capital_cost.filter(like='coal CC').filter(like=str(year)).filter(like=country)).sum()
             var['Investment|Energy Supply|Electricity|Coal|w/o CCS'] = (n.links.p_nom_opt.filter(like='coal').filter(like=str(year)).filter(like=country)*
                                          n.links.capital_cost.filter(like='coal').filter(like=str(year)).filter(like=country)).sum()
-            var['Investment|Energy Supply|Electricity|Electricity Storage'] = (n.links.p_nom_opt.filter(like='coal').filter(like=str(year)).filter(like=country)*
-                                         n.links.capital_cost.filter(like='coal').filter(like=str(year)).filter(like=country)).sum()
-            var['Investment|Energy Supply|Electricity|Fossil'] = (n.links.p_nom_opt.filter(like='coal').filter(like=str(year)).filter(like=country)*
-                                         n.links.capital_cost.filter(like='coal').filter(like=str(year)).filter(like=country)).sum()
+            var['Investment|Energy Supply|Electricity|Electricity Storage'] = ((n.links.p_nom_opt.filter(like='battery').filter(like=str(year)).filter(like=country)*
+                                         n.links.capital_cost.filter(like='battery').filter(like=str(year)).filter(like=country)).sum()+
+                                         (n.stores.e_nom_opt.filter(like='battery').filter(like=str(year)).filter(like=country)*
+                                         n.stores.capital_cost.filter(like='battery').filter(like=str(year)).filter(like=country)).sum())
             var['Investment|Energy Supply|Electricity|Gas'] = (n.links.p_nom_opt.filter(like='CGT').filter(like=str(year)).filter(like=country)*
                                          n.links.capital_cost.filter(like='CGT').filter(like=str(year)).filter(like=country)).sum()
+            var['Investment|Energy Supply|Electricity|Fossil'] = (var['Investment|Energy Supply|Electricity|Coal|w/ CCS']
+                                                               + var['Investment|Energy Supply|Electricity|Coal|w/o CCS']
+                                                               + var['Investment|Energy Supply|Electricity|Gas'] )
             var['Investment|Energy Supply|Electricity|Hydro'] =((n.generators.p_nom_opt.filter(like='ror').filter(like=str(year)).filter(like=country)*
                                          n.generators.capital_cost.filter(like='ror').filter(like=str(year)).filter(like=country)).sum()+
                                          (n.links.p_nom_opt.filter(like='hydro').filter(like=str(year)).filter(like=country)*
