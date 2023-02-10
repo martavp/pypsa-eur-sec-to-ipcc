@@ -179,10 +179,8 @@ for scenario in scenarios:
                #MWh to GWh
                var[v_type+'|Electricity|Storage|Pumped Hydro Storage'] = MW2GW*(n.storage_units.p_nom_opt.filter(like ='PHS').filter(like =country).filter(like=str(dict_var[v_type]))*
                                                                                n.storage_units.max_hours.filter(like ='PHS').filter(like =country).filter(like=str(dict_var[v_type]))).sum()
-               var[v_type+'|Electricity|Storage|Battery Capacity|Home Battery'] =MW2GW*((n.links.efficiency.filter(like ='home battery charger').filter(like =country).filter(like=str(dict_var[v_type]))
-                 *n.links.p_nom_opt.filter(like ='home battery charger').filter(like =country).filter(like=str(dict_var[v_type]))).sum())
-               var[v_type+'|Electricity|Storage|Battery Capacity'] = MW2GW*((n.links.efficiency.filter(like ='battery charger').filter(like =country).filter(like=str(dict_var[v_type]))
-                 *n.links.p_nom_opt.filter(like ='battery charger').filter(like =country).filter(like=str(dict_var[v_type]))).sum())
+               var[v_type+'|Electricity|Storage|Battery Capacity|Home Battery'] =MW2GW*((n.stores.e_nom_opt.filter(like ='home battery').filter(like =country).filter(like=str(dict_var[v_type]))).sum())
+               var[v_type+'|Electricity|Storage|Battery Capacity'] = MW2GW*((n.stores.e_nom_opt.filter(like ='battery').filter(like =country).filter(like=str(dict_var[v_type]))).sum())
                var[v_type+'|Electricity|Storage|Battery Capacity|Utility-scale Battery'] = (var[v_type+'|Electricity|Storage|Battery Capacity'] 
                  - var[v_type+'|Electricity|Storage|Battery Capacity|Home Battery'])
                #var[v_type+'|Electricity|Storage|Hydrogen Storage Capacity|overground'] = MW2GW *(n.stores.e_nom_opt.filter(like ='H2').filter(like =country).filter(like=str(dict_var[v_type])).sum()/168) #assume one week charge time for H2 storage
@@ -193,11 +191,7 @@ for scenario in scenarios:
                var[v_type+'|Storage|Thermal Energy Storage|District heating storage'] = n.stores.e_nom_opt.filter(like ='central water tank').filter(like =country).filter(like=str(dict_var[v_type])).sum()/(180*24)  #3 day for house and 180 day for rural water tank  charge
                var[v_type+'|Storage|Thermal Energy Storage'] = var[v_type+'|Storage|Thermal Energy Storage|Household storage'] + var[v_type+'|Storage|Thermal Energy Storage|District heating storage']
                
-               #MW to GW                                                             
-               var[v_type+'|Electricity|Storage Capacity'] = MW2GW* (n.storage_units.p_nom_opt.filter(like ='PHS').filter(like =country).filter(like=str(dict_var[v_type])).sum()   #PHS+battery+hydrogen
-                                                            + ((n.links.efficiency.filter(like ='battery charger').filter(like =country).filter(like=str(dict_var[v_type]))
-                                                                *n.links.p_nom_opt.filter(like ='battery charger').filter(like =country).filter(like=str(dict_var[v_type]))).sum())
-                                                            + (n.links.p_nom_opt.filter(like ='Fuel Cell').filter(like =country).filter(like=str(dict_var[v_type])).sum()))                                  
+                  
                """
                Capacity : grid, peak , other
                """
