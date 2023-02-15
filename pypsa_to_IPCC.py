@@ -507,6 +507,7 @@ for scenario in scenarios:
 
 
             for v in var.keys():
+              if [r for r in ds['D'] if r.value==v]:         
                 ro=[r for r in ds['D'] if r.value==v][0].row
 
                 if 'Cumulative Capacity' in v:
