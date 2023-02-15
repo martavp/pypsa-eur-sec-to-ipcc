@@ -116,7 +116,7 @@ for scenario in scenarios:
             ds = file['data' + str(i)] 
             var={}
             
-            dict_var={'Capacity':' ', 'Capacity Additions':year}      
+            dict_var={'Cumulative Capacity':' ', 'Capacity':' ', 'Capacity Additions':year, }      
             for v_type in dict_var.keys():
                """
                Capacity : Solar PV, onshore and offshore wind
@@ -508,6 +508,13 @@ for scenario in scenarios:
 
             for v in var.keys():
                 ro=[r for r in ds['D'] if r.value==v][0].row
+
+                if 'Cumulative Capacity' in v:
+                    col_last=[c for c in ds[1] if c.value==years[years.index(year)-1]][0].column   
+                    if year != years[0]:    
+                        var[v] = (ds.cell(row=ro, column=col_last).value +
+                                  var[v.replace('Cumulative Capacity','Capacity Additions')] )
+                        
                 ds.cell(row=ro, column=col).value = round(var[v],3) 
                 ds.cell(row=ro, column=1).value = model
                 ds.cell(row=ro, column=2).value = scenario
@@ -527,4 +534,3 @@ for scenario in scenarios:
  
         
     file.save(f"{output_folder}IPCC_AR6_{scenario}_new.xlsx")
-
