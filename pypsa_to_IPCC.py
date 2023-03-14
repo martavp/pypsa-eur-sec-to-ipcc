@@ -303,7 +303,7 @@ for scenario in scenarios:
                              if i==0 :  var['Final Energy|Industry|'+industry+'|'+v_type]=0   #skips electricity
                              if industry_name in prod.columns:   #skips some variables that are in newer networks
                                  var['Final Energy|Industry|'+industry+'|'+v_type]+= (   
-                                 ratios[industry_name][v_name]*prod[industry_name].filter(like=country).sum)   
+                                 ratios[industry_name][v_name]*prod[industry_name].filter(like=country).sum())   
   
             var['Final Energy|Industry|Electricity']=MWh2EJ*h*(n.loads_t.p.filter(like ='industry electricity').filter(like =country).sum().sum())    
             var['Final Energy|Industry|Gases|Fossil'] = MWh2EJ*industry_demand['methane'].filter(like=country).sum()  
