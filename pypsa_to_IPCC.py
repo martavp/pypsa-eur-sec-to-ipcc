@@ -10,6 +10,13 @@ import pandas as pd
 import yaml
 from itertools import product
 
+def safe_div(n, d):
+ """
+ Only divides if the divisor is not zero, otherwise returns zero.
+ """ 
+ return n / d if d else 0
+
+
 MWh2EJ=3.6e-9     #convert MWh to EJ
 t2Mt=1e-6       # convert tonnes to Mtonnes
 MW2GW=0.001       # convert MW/MWh to GW/GWh
