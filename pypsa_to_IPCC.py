@@ -301,7 +301,7 @@ for scenario in scenarios:
                      for v_type in industry_inputs.keys():
                          for i, v_name in enumerate(industry_inputs[v_type]):
                              if i==0 :  var['Final Energy|Industry|'+industry+'|'+v_type]=0   #skips electricity
-                             if 'industry_name' in prod.columns:   #skips some variables that are in newer networks
+                             if industry_name in prod.columns:   #skips some variables that are in newer networks
                                  var['Final Energy|Industry|'+industry+'|'+v_type]+= (   
                                  ratios[industry_name][v_name]*prod[industry_name].filter(like=country).sum)   
   
