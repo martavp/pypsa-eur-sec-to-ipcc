@@ -466,14 +466,51 @@ for scenario in scenarios:
 
 
             """
-            Emissions and Carbon intensity for industry (MtCO2)   #carbon intensity or emissions
+            Emissions (MtCO2)   
             """
-             
+            
+            
+            #Emissions :  
+            #CHP emissions are calculated based on share of electricity and heat:
+
+            var['Emissions|CO2|Energy|Supply|Electricity'] = (1e-6)*(-1)*h*(
+                n.links_t.p2.filter(like ='lignite').filter(like =country).sum().sum()+
+                n.links_t.p2.filter(like ='coal').filter(like =country).sum().sum() +
+                n.links_t.p2.filter(like ='oil-').filter(like =country).sum().sum()+
+                n.links_t.p2.filter(like ='OCGT').filter(like =country).sum().sum()+
+                n.links_t.p2.filter(like ='CCGT').filter(like =country).sum().sum()+
+                safe_div(n.links_t.p3.filter(like ='gas CHP').filter(like =country).sum().sum()
+                       *n.links_t.p1.filter(like ='gas CHP').filter(like =country).sum().sum()             
+                       ,n.links_t.p1.filter(like ='gas CHP').filter(like =country).sum().sum()+
+                         n.links_t.p2.filter(like ='gas CHP').filter(like =country).sum().sum())+ 
+                safe_div(n.links_t.p3.filter(like ='solid biomass CHP').filter(like =country).sum().sum()
+                        *n.links_t.p1.filter(like ='solid biomass CHP').filter(like =country).sum().sum()            
+                        ,n.links_t.p1.filter(like ='solid biomass CHP').filter(like =country).sum().sum()+
+                       n.links_t.p2.filter(like ='solid biomass CHP').filter(like =country).sum().sum())) 
+
+            
+            var['Emissions|CO2|Energy|Supply|Gases']  = (1e-6)*(-1)*h*(
+                n.links_t.p2.filter(like ='SMR').filter(like =country)).sum().sum()
+                        
+            var['Emissions|CO2|Energy|Supply|Heat'] = (1e-6)*(-1)*h*(
+                 n.links_t.p2.filter(like ='oil boiler').filter(like =country).sum().sum()+ 
+                 n.links_t.p2.filter(like ='gas boiler').filter(like =country).sum().sum()+
+                 safe_div(n.links_t.p3.filter(like ='gas CHP').filter(like =country).sum().sum()
+                            *n.links_t.p2.filter(like ='gas CHP').filter(like =country).sum().sum()            
+                             ,n.links_t.p1.filter(like ='gas CHP').filter(like =country).sum().sum()+
+                             n.links_t.p2.filter(like ='gas CHP').filter(like =country).sum().sum())+
+                 safe_div(n.links_t.p3.filter(like ='solid biomass CHP').filter(like =country).sum().sum()
+                           *n.links_t.p2.filter(like ='solid biomass CHP').filter(like =country).sum().sum()            
+                           ,n.links_t.p1.filter(like ='solid biomass CHP').filter(like =country).sum().sum()+
+                             n.links_t.p2.filter(like ='solid biomass CHP').filter(like =country).sum().sum())) 
             
             var['Emissions|CO2|Energy|Supply']=(-1)*t2Mt*(n.links_t.p1[[i for i in n.links.index if 'co2 atm' in n.links.bus1[i] and country in i]].sum().sum()
-                                     +n.links_t.p2[[i for i in n.links.index if 'co2 atm' in n.links.bus2[i] and 'nuclear' not in i and country in i]].sum().sum()
-                                     +n.links_t.p3[[ i for i in n.links.index if 'co2 atm' in n.links.bus3[i] and country in i]].sum().sum())
-
+                  +n.links_t.p2[[i for i in n.links.index if 'co2 atm' in n.links.bus2[i] and 'nuclear' not in i and country in i]].sum().sum()
+                   +n.links_t.p3[[ i for i in n.links.index if 'co2 atm' in n.links.bus3[i] and country in i]].sum().sum())
+            
+            """
+            Carbon intensity for industry (MtCO2)   
+            """
             var['Carbon Intensity|Production|Cement']=t2Mt*ratios['Cement']['process emission']*prod['Cement'].filter(like=country).sum()
             var['Carbon Intensity|Production|Chemicals|Ammonia']=t2Mt*ratios['Ammonia']['process emission']*prod['Ammonia'].filter(like=country).sum()
             if 'HVC' in prod.columns: var['Carbon Intensity|Production|Chemicals|High value chemicals']=(t2Mt*ratios['HVC']['process emission']*prod['HVC'].filter(like=country).sum()+
