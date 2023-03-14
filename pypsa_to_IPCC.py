@@ -440,6 +440,14 @@ for scenario in scenarios:
             var['Investment|Energy Supply|Hydrogen|Fossil'] =  (n.links.p_nom_opt.filter(like='SMR').filter(like=str(year)).filter(like=country)*
                                          n.links.capital_cost.filter(like='SMR').filter(like=str(year)).filter(like=country)).sum()
 
+            
+            """
+            Price of energy
+            """
+            var['Discount rate|Economy']= config['costs']['discountrate']
+            var['price|Final Energy|Residential and Commercial|Residential|Electricity']= n.buses_t.marginal_price.filter(like='low voltage').filter(like=country).mean()
+            var['price|Final Energy|Residential and Commercial|Residential|Gases|Natural Gas']= n.buses_t.marginal_price.filter(like='EU gas').mean()
+            var['price|Final Energy|Transportation|Hydrogen']= n.buses_t.marginal_price.filter(like='H2').filter(like=country).mean()
 
             """
             Efficiency
