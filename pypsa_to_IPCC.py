@@ -485,7 +485,7 @@ for scenario in scenarios:
             #Emissions :  
             #CHP emissions are calculated based on share of electricity and heat:
 
-            var['Emissions|CO2|Energy|Supply|Electricity'] = (1e-6)*(-1)*h*(
+            var['Emissions|CO2|Energy|Supply|Electricity'] = t2Mt*(-1)*h*(
                 n.links_t.p2.filter(like ='lignite').filter(like =country).sum().sum()+
                 n.links_t.p2.filter(like ='coal').filter(like =country).sum().sum() +
                 n.links_t.p2.filter(like ='oil-').filter(like =country).sum().sum()+
@@ -501,10 +501,10 @@ for scenario in scenarios:
                        n.links_t.p2.filter(like ='solid biomass CHP').filter(like =country).sum().sum())) 
 
             
-            var['Emissions|CO2|Energy|Supply|Gases']  = (1e-6)*(-1)*h*(
+            var['Emissions|CO2|Energy|Supply|Gases']  = t2Mt*(-1)*h*(
                 n.links_t.p2.filter(like ='SMR').filter(like =country)).sum().sum()
                         
-            var['Emissions|CO2|Energy|Supply|Heat'] = (1e-6)*(-1)*h*(
+            var['Emissions|CO2|Energy|Supply|Heat'] = t2Mt*(-1)*h*(
                  n.links_t.p2.filter(like ='oil boiler').filter(like =country).sum().sum()+ 
                  n.links_t.p2.filter(like ='gas boiler').filter(like =country).sum().sum()+
                  safe_div(n.links_t.p3.filter(like ='gas CHP').filter(like =country).sum().sum()
