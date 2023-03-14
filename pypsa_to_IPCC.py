@@ -338,6 +338,10 @@ for scenario in scenarios:
             var['Final Energy|Residential and Commercial|Residential|Heating|Electric boilers'] = - MWh2EJ * (n.links_t.p1.filter(like ='resistive heater').filter(like='residentioal').filter(like =country).sum().sum())
             var['Final Energy|Gas|Synthetic'] = - MWh2EJ*n.links_t.p1.filter(like ='Sabatier').filter(like =country).sum().sum()
             
+            #Agriculture demand
+            
+            var['Agricultural Demand|Crops|Energy']= MWh2EJ*h*(n.loads_t.p.filter(like ='agriculture').filter(like =country).sum().sum())    
+
             """
             Capital cost and Lifetime 
             """
